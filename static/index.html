@@ -1,0 +1,2687 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Terminal</title>
+    <link rel="stylesheet" href="/vendor/xterm/xterm.css" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #040806;
+        --panel: #08110d;
+        --panel-2: #0b1611;
+        --panel-3: #0d1d15;
+        --border: #173125;
+        --border-strong: #26513d;
+        --text: #dbffe9;
+        --muted: #7ea28f;
+        --accent: #7cefa8;
+        --accent-2: #143427;
+        --danger: #f08c8c;
+        --shadow: 0 18px 40px rgba(0,0,0,.32);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at top, #0d1713 0%, #040806 60%);
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      button, input, select, textarea {
+        font: inherit;
+        color: var(--text);
+      }
+      .page {
+        width: min(1540px, calc(100vw - 24px));
+        margin: 12px auto;
+        display: grid;
+        gap: 12px;
+      }
+      .shell, .tabs, .rail-card, .pane-card, .toolbar, .hero {
+        border: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(12,23,18,.98), rgba(7,13,10,.98));
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+      }
+      .hero {
+        padding: 14px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+      }
+      .hero h1 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1;
+      }
+      .hero-sub {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .hero-left {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .logo-mark {
+        font-size: 22px;
+        line-height: 1;
+      }
+
+      .logo-text {
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .hero-metrics {
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+      .metric {
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 11px;
+        color: var(--muted);
+        background: rgba(10,18,14,.9);
+      }
+      .metric strong { color: var(--text); font-size: 12px; }
+      .toolbar {
+        padding: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .spacer { flex: 1 1 auto; }
+      .btn {
+        border: 1px solid var(--border-strong);
+        background: #0a1511;
+        border-radius: 10px;
+        padding: 8px 11px;
+        cursor: pointer;
+      }
+      .btn:hover { background: #0e1c16; }
+      .btn.primary {
+        background: #123325;
+        border-color: #377a5d;
+      }
+      .btn.ghost { color: var(--muted); }
+      .btn.danger { border-color: #6d3232; color: #ffc2c2; }
+      .btn.active { outline: 1px solid #5ec889; }
+      .tiny {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .tabs {
+        padding: 8px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        overflow-x: auto;
+      }
+      .tab {
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: #0b1511;
+        color: var(--text);
+        padding: 8px 12px;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .tab.active {
+        background: #123527;
+        border-color: #4ca06f;
+      }
+      .tab.dim { color: var(--muted); }
+      .dropdown-wrap { position: relative; display: inline-flex; }
+      .dropdown-wrap.align-right .dropdown-menu { left: auto; right: 0; }
+      .dropdown-menu {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        min-width: 260px;
+        max-width: 380px;
+        max-height: 360px;
+        overflow: auto;
+        padding: 8px;
+        border: 1px solid var(--border-strong);
+        border-radius: 12px;
+        background: #06100c;
+        box-shadow: 0 22px 50px rgba(0,0,0,.55);
+        z-index: 20;
+      }
+      .dropdown-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) repeat(5, auto);
+        gap: 6px;
+        align-items: center;
+        padding: 7px;
+        border-bottom: 1px dashed rgba(126,162,143,.18);
+      }
+      .dropdown-row:last-child { border-bottom: 0; }
+      .dropdown-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+      .settings-menu { min-width: 320px; max-width: 360px; }
+      .theme-menu { min-width: 260px; max-width: 320px; padding: 8px; }
+      .settings-grid { display: grid; gap: 8px; }
+      .theme-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .theme-card {
+        display: grid;
+        gap: 5px;
+        padding: 8px;
+        border-radius: 10px;
+        border: 1px solid var(--border-strong);
+        background: rgba(255,255,255,.02);
+        color: var(--text);
+        text-align: left;
+      }
+      .theme-card.active { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(124,239,168,.18) inset; }
+      .theme-card strong { font-size: 12px; }
+      .theme-card span { font-size: 10px; color: var(--muted); }
+      .theme-preview { height: 30px; border-radius: 8px; border: 1px solid rgba(255,255,255,.08); }
+      .settings-field { display: grid; gap: 4px; }
+      .settings-field label { font-size: 11px; color: var(--muted); }
+      .settings-field input, .settings-field select { width: 100%; }
+      .settings-actions { display: flex; gap: 6px; justify-content: flex-end; padding-top: 4px; }
+      .settings-inline { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text); }
+      .settings-inline input[type="checkbox"] { width: auto; }
+      .toolbar-right { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+      .icon-btn { min-width: 28px; width: 28px; padding: 0; font-size: 14px; justify-content: center; }
+      .auth-settings-menu {
+        min-width: 356px;
+        max-width: 392px;
+        display: grid;
+        gap: 12px;
+        padding: 14px;
+        border: 1px solid rgba(126,162,143,.22);
+        border-radius: 14px;
+        background: linear-gradient(180deg, rgba(8,13,10,.98), rgba(5,9,7,.98));
+        box-shadow: 0 18px 44px rgba(0,0,0,.42);
+      }
+      .auth-settings-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-bottom: 6px; border-bottom: 1px solid rgba(126,162,143,.18); }
+      .auth-settings-title { font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+      .auth-settings-user { font-size: 11px; color: var(--muted); }
+      .auth-settings-section { display: grid; gap: 8px; padding: 2px 0; }
+      .auth-settings-section + .auth-settings-section { border-top: 1px dashed rgba(126,162,143,.18); padding-top: 12px; }
+      .auth-settings-label { font-size: 11px; color: var(--muted); }
+      .auth-settings-form { display: grid; gap: 8px; }
+      .auth-settings-form input { width: 100%; }
+      .auth-settings-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; align-items: center; }
+      .auth-settings-row .btn { white-space: nowrap; }
+      .auth-settings-actions { display: flex; justify-content: flex-end; gap: 6px; }
+      .auth-settings-note { font-size: 10px; color: var(--muted); opacity: .92; }
+      .auth-settings-error { min-height: 14px; font-size: 11px; color: #ffb2b2; white-space: pre-wrap; }
+      .auth-settings-ok { color: #a9f7c5; }
+      .main {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 310px;
+        gap: 12px;
+      }
+      .workbench {
+        display: grid;
+        gap: 12px;
+      }
+      .panes.single { grid-template-columns: 1fr; }
+      .panes.split { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .panes {
+        display: grid;
+        gap: 12px;
+      }
+      .pane-card {
+        min-height: 72vh;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .pane-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      .pane-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #2d5e48;
+      }
+      .dot.live { background: var(--accent); box-shadow: 0 0 10px rgba(124,239,168,.5); }
+      .pane-meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .chip {
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 3px 8px;
+        font-size: 11px;
+        color: var(--muted);
+        background: rgba(255,255,255,.02);
+      }
+      .pane-body {
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+      }
+      .terminal {
+        flex: 1 1 auto;
+        min-height: 0;
+        height: 100%;
+        border: 1px solid #0f2a1d;
+        background: #020503;
+        color: #d9ffe7;
+        border-radius: 10px;
+        padding: 8px;
+        overflow: hidden;
+      }
+      .terminal .xterm { height: 100%; }
+      .terminal .xterm-viewport { background: #020503 !important; }
+      .xterm-screen, .xterm-viewport { border-radius: 8px; }
+      .input-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .input-row input, .pane-head select, .rail-search input, .mini-select {
+        width: 100%;
+        border: 1px solid var(--border-strong);
+        background: #09130f;
+        border-radius: 10px;
+        padding: 9px 10px;
+      }
+      .mini-select { width: auto; padding: 6px 8px; font-size: 11px; }
+      .rail {
+        display: grid;
+        gap: 12px;
+      }
+      .rail-card {
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .rail-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .rail-tab {
+        border: 1px solid var(--border);
+        background: #09130f;
+        border-radius: 10px;
+        padding: 8px 6px;
+        text-align: center;
+        cursor: pointer;
+        color: var(--muted);
+      }
+      .rail-tab.active {
+        color: var(--text);
+        background: #123325;
+        border-color: #4ca06f;
+      }
+      .rail-head {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      .rail-search { margin-bottom: 8px; }
+      .rail-body {
+        display: grid;
+        gap: 8px;
+        overflow: auto;
+        min-height: 0;
+      }
+      .cmd-row {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #08110d;
+        padding: 8px;
+        display: grid;
+        gap: 6px;
+      }
+      .cmd-text {
+        font-size: 12px;
+        line-height: 1.35;
+        word-break: break-word;
+      }
+      .cmd-actions {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .rail-editor textarea, .file-write-box textarea {
+        width: 100%;
+        min-height: 120px;
+        border: 1px solid var(--border-strong);
+        background: #050c08;
+        border-radius: 8px;
+        padding: 8px;
+        color: var(--text);
+        resize: vertical;
+      }
+      .section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        cursor: pointer;
+        color: var(--text);
+        font-size: 12px;
+      }
+      details.preset-section {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #06100c;
+        padding: 6px;
+      }
+      .file-row {
+        display: grid;
+        grid-template-columns: minmax(0,1fr) auto;
+        gap: 6px;
+        align-items: center;
+        border: 1px solid var(--border);
+        background: #06100c;
+        border-radius: 8px;
+        padding: 6px;
+      }
+      .file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+      .warn-chip { border-color: #6d5b22; color: #ffd98a; }
+      .input-compact {
+        width: 100%;
+        border: 1px solid var(--border-strong);
+        background: #09130f;
+        border-radius: 8px;
+        padding: 6px 8px;
+      }
+      .listline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 8px 0;
+        border-bottom: 1px dashed rgba(126,162,143,.18);
+        font-size: 12px;
+      }
+      .listline:last-child { border-bottom: 0; }
+      .notice { color: var(--muted); font-size: 12px; line-height: 1.45; }
+      .banner {
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: rgba(16,27,21,.95);
+        color: var(--muted);
+        font-size: 12px;
+      }
+      body.auth-locked #app-page { display: none; }
+      .auth-page {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+      body:not(.auth-locked) .auth-page { display: none; }
+      .auth-card {
+        width: min(430px, calc(100vw - 32px));
+        border: 1px solid var(--border-strong);
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(10,22,16,.98), rgba(4,8,6,.98));
+        box-shadow: 0 28px 90px rgba(0,0,0,.55);
+        padding: 24px;
+      }
+      .auth-card h1 { margin: 0 0 8px; font-size: 26px; }
+      .auth-card p { margin: 0 0 18px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+      .auth-form { display: grid; gap: 12px; }
+      .auth-field { display: grid; gap: 6px; }
+      .auth-field label { color: var(--muted); font-size: 11px; }
+      .auth-field input {
+        width: 100%;
+        border: 1px solid var(--border-strong);
+        border-radius: 10px;
+        background: #050b08;
+        padding: 11px 12px;
+        outline: none;
+      }
+      .auth-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(124,239,168,.12); }
+      .auth-error { min-height: 18px; color: var(--danger); font-size: 12px; }
+      .auth-note { margin-top: 14px; color: var(--muted); font-size: 11px; }
+      .auth-switch { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-top: 12px; }
+      .auth-switch .btn { min-height: 30px; }
+      .hidden { display: none !important; }
+
+      /* Hermes-terminal compact parity pass */
+      body { background: #020503; }
+      .page {
+        width: calc(100vw - 16px);
+        margin: 6px auto;
+        gap: 6px;
+      }
+      .shell, .tabs, .rail-card, .pane-card, .toolbar, .hero {
+        border-radius: 10px;
+        box-shadow: none;
+        background: linear-gradient(180deg, rgba(7,16,12,.98), rgba(3,8,6,.98));
+      }
+      .hero {
+        min-height: 38px;
+        padding: 6px 10px;
+        flex-wrap: nowrap;
+        align-items: center;
+      }
+      .hero > div:first-child { display: flex; align-items: center; gap: 10px; min-width: 0; }
+      .hero h1 { font-size: 16px; letter-spacing: .02em; white-space: nowrap; }
+      .hero h1::after { content: ' · standalone'; color: var(--muted); font-size: 11px; font-weight: 400; margin-left: 8px; }
+      .hero-sub { display: none; }
+      .hero-metrics { flex-wrap: nowrap; gap: 5px; overflow-x: auto; }
+      .metric { padding: 3px 7px; font-size: 10px; }
+      .metric strong { font-size: 11px; }
+      .toolbar { padding: 6px; gap: 5px; flex-wrap: nowrap; overflow-x: auto; min-height: 38px; }
+      .toolbar .tiny { display: none; }
+      .btn { border-radius: 8px; padding: 5px 7px; font-size: 12px; white-space: nowrap; }
+      .tabs { padding: 5px; gap: 5px; min-height: 38px; }
+      .tab { padding: 5px 10px; font-size: 12px; }
+      .main { grid-template-columns: minmax(0, 1fr) 300px; gap: 6px; }
+      .workbench { display: flex; flex-direction: column; gap: 4px; min-height: calc(100vh - 178px); }
+      .banner { flex: 0 0 auto; padding: 4px 8px; border-radius: 8px; font-size: 11px; }
+      .pane-card { flex: 1 1 auto; min-height: 0; border-radius: 10px; }
+      .pane-head { padding: 5px 8px; min-height: 34px; }
+      .pane-title strong { font-size: 13px; }
+      .pane-meta { gap: 4px; }
+      .chip { padding: 2px 6px; font-size: 10px; }
+      .pane-body { padding: 5px; }
+      .terminal { padding: 5px; border-radius: 8px; }
+      .rail-card { padding: 6px; min-height: calc(100vh - 178px) !important; }
+      .rail-tabs { gap: 4px; margin-bottom: 6px; }
+      .rail-tab { padding: 6px 5px; border-radius: 8px; font-size: 12px; }
+      .rail-head { margin-bottom: 5px; align-items: center; }
+      .rail-search { margin-bottom: 5px; }
+      .rail-search input, .mini-select { padding: 6px 8px; border-radius: 8px; font-size: 12px; }
+      .rail-body { gap: 5px; }
+      .cmd-row { padding: 6px; gap: 4px; border-radius: 8px; }
+      .cmd-text { font-size: 11px; line-height: 1.25; }
+      .cmd-actions { gap: 4px; }
+      .cmd-actions .btn { padding: 4px 7px; }
+      .quickbar {
+        flex: 1 1 260px;
+        min-width: 210px;
+        display: flex;
+        gap: 5px;
+        align-items: center;
+        padding: 3px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: rgba(1,7,4,.88);
+      }
+      .quickbar input {
+        min-width: 120px;
+        flex: 1 1 auto;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--text);
+        padding: 5px 7px;
+        font-size: 12px;
+      }
+      .cwd-pills { display: inline-flex; gap: 4px; align-items: center; }
+      .main.focus-mode { grid-template-columns: minmax(0, 1fr); }
+      .main.focus-mode .rail { display: none; }
+      .main.focus-mode .workbench { min-height: calc(100vh - 134px); }
+      .main.focus-mode .pane-card { min-height: 0; }
+      .screen-copied { outline: 1px solid rgba(124,239,168,.65); }
+
+      .toolbar { height: 44px; min-height: 44px; padding: 4px 6px; gap: 5px; overflow: visible; flex-wrap: nowrap; align-content: center; }
+      .toolbar .btn { min-width: 0; padding: 0 8px; transition: background .15s ease, border-color .15s ease, color .15s ease, opacity .15s ease; }
+      .btn:disabled { opacity: .42; color: #6f8178; border-color: rgba(255,255,255,.05); background: rgba(255,255,255,.025); cursor: not-allowed; }
+      .btn.primary, .btn.active { background: #173f2e; border-color: #6bd795; color: #f1fff6; box-shadow: inset 0 0 0 1px rgba(124,239,168,.18); }
+      .btn.danger { background: rgba(91,25,25,.45); border-color: rgba(242,120,120,.65); color: #ffd0d0; }
+      .btn.warn { background: rgba(108,82,15,.35); border-color: rgba(240,199,92,.5); color: #ffe7a6; }
+      .quickbar { display: none !important; }
+      .tabs { flex: 0 0 auto; max-width: none; min-width: 0; height: 32px; padding: 1px; border: 1px solid rgba(255,255,255,.07); border-radius: 10px; background: rgba(0,0,0,.20); }
+      .tab { max-width: 230px; padding: 0 12px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+      .tab.pinned::before { content: '★ '; color: #f6f37b; }
+      .cwd-pills { flex: 0 0 auto; }
+      .cwd-pills .btn { min-width: 54px; }
+      .system-info { flex: 0 0 auto; display: inline-flex; gap: 3px; align-items: center; min-width: 0; }
+      .sys-chip { height: 24px; min-width: 0; padding: 0 6px; display: inline-flex; align-items: center; gap: 3px; border: 1px solid rgba(255,255,255,.08); border-radius: 7px; background: rgba(0,0,0,.24); color: #aebdb4; font-size: 10px; line-height: 1; white-space: nowrap; }
+      .sys-chip strong { color: #e7fff0; font-weight: 800; }
+      .sys-chip.hot strong { color: #ffd0d0; }
+      .sys-chip.warn strong { color: #ffe7a6; }
+      .pane-head { display: none !important; }
+      .pane-title { gap: 5px; }
+      .pane-title strong { font-size: 12px; }
+      .pane-title select { height: 26px; max-width: 120px; border-radius: 9px; padding: 0 8px; background: #092019; border: 1px solid #2e5a45; }
+      .pane-meta { gap: 4px; flex-wrap: nowrap; margin-left: auto; }
+      .pane-meta .chip { font-size: 9px; letter-spacing: .16em; }
+      .pane-meta .btn { height: 26px; min-height: 26px; padding: 0 8px; }
+      .file-tools { display: grid; grid-template-columns: auto auto auto minmax(0,1fr) auto; gap: 4px; align-items: center; }
+      .file-tools .btn { min-width: 0; padding: 0 6px; }
+      .file-tools input[type=file] { min-width: 0; width: 100%; font-size: 10px; }
+      .file-write-box { display: grid !important; grid-template-columns: minmax(0,1fr) auto; gap: 5px; }
+      .file-write-box textarea { grid-column: 1 / -1; min-height: 70px !important; resize: vertical; }
+      .file-write-box .cmd-actions { grid-column: 2; }
+      .file-row { min-height: 34px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px; align-items: center; padding: 5px 6px; }
+      .file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+      .file-row .btn { height: 22px; min-height: 22px; padding: 0 5px; font-size: 9px; }
+      #session-summary { min-height: 0; padding: 6px 8px; display: block; }
+      @media (max-width: 1200px) {
+        .main { grid-template-columns: 1fr; }
+        .pane-card { min-height: 52vh; }
+      }
+      @media (max-width: 900px) {
+        .panes.split { grid-template-columns: 1fr; }
+        .hero { align-items: flex-start; flex-direction: column; }
+        .hero-metrics { justify-content: flex-start; }
+      }
+
+      /* Hermes Terminal parity override — source-level visual clone target */
+      :root {
+        --bg: #05070b; --panel: #071512; --panel-2: #081310; --panel-3: #0a1714;
+        --border: #22372f; --border-strong: #385247; --text: #eef7f0; --muted: #9fb2a8;
+        --accent: #d7e1da; --accent-2: #1a2b27; --danger: #f2a3a3; --shadow: none;
+      }
+      html, body { height: 100%; overflow: hidden; }
+      body { background: #05070b; color: var(--text); font-family: JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .page { width: 100%; height: 100vh; min-height: 0; margin: 0; padding: 4px 8px 8px; display: flex; flex-direction: column; gap: 8px; background: #05070b; }
+      .hero { display: none !important; }
+      .shell, .tabs, .rail-card, .pane-card, .toolbar, .hero { box-shadow: none; background: #071512; border-color: var(--border); border-radius: 12px; }
+      .toolbar { position: relative; z-index: 50; min-height: 40px; padding: 4px; display: flex; flex-wrap: nowrap; gap: 4px; align-items: center; overflow: visible; background: #060910; border-color: rgba(255,255,255,.08); border-radius: 12px; }
+      .toolbar .tiny { display: none; }
+      .btn { height: 28px; min-height: 28px; padding: 0 8px; border-radius: 8px; border-color: rgba(255,255,255,.08); background: rgba(0,0,0,.30); color: #c9d5ce; font-size: 11px; line-height: 1; white-space: nowrap; }
+      .btn:hover { background: rgba(255,255,255,.06); color: #eef7f0; }
+      .btn.primary { background: #1a2b27; border-color: #385247; color: #eef7f0; }
+      .btn.ghost { color: #b9c6bf; }
+      .btn.danger { color: #f2c2c2; border-color: rgba(242, 163, 163, .25); background: rgba(80,20,20,.15); }
+      .tabs { flex: 1 1 auto; min-width: 260px; padding: 0; gap: 4px; border: 0; background: transparent; box-shadow: none; overflow-x: auto; scrollbar-width: none; }
+      .tabs::-webkit-scrollbar { display: none; }
+      .tab { height: 30px; display: inline-flex; align-items: center; gap: 4px; border-radius: 8px; padding: 0 8px; background: transparent; border-color: transparent; color: #b9c6bf; font-size: 11px; }
+      .tab.active { background: #123f2d; border-color: #7cefa8; color: #ecfff2; box-shadow: 0 0 0 1px rgba(124,239,168,.2); }
+      .tab.dim { color: #8ea196; }
+      .quickbar { flex: 0 1 310px; min-width: 210px; height: 30px; padding: 2px; gap: 2px; border-color: rgba(255,255,255,.08); border-radius: 9px; background: rgba(0,0,0,.30); }
+      .quickbar input { height: 24px; padding: 0 7px; font-size: 11px; color: #d7e1da; }
+      .cwd-pills { gap: 2px; }
+      .main { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 6px; }
+      .main.focus-mode { grid-template-columns: minmax(0,1fr); }
+      .workbench { min-height: 0; display: flex; flex-direction: column; gap: 4px; }
+      .banner { flex: 0 0 auto; min-height: 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 9px; background: #081310; color: #aebdb4; font-size: 11px; }
+      .banner:empty { display: none; }
+      .panes { flex: 1 1 auto; min-height: 0; display: flex; gap: 0; }
+      .panes.single { display: flex; }
+      .panes.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .pane-card { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; border-radius: 14px; background: #071512; border-color: #31443c; padding: 8px 10px 10px; }
+      .pane-head { flex: 0 0 auto; margin-bottom: 6px; padding: 0 4px; border-bottom: 0; min-height: 18px; color: #e7ebdf; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
+      .pane-title strong, .pane-title span { color: #f3f6eb; }
+      .pane-meta .chip { border: 0; background: transparent; color: #f3f6eb; font-size: 10px; padding: 0; }
+      .pane-body { flex: 1 1 auto; min-height: 0; padding: 0; }
+      .terminal { flex: 1 1 auto; min-height: 0; padding: 6px 4px 8px 6px; border-radius: 9px; border: 1px solid var(--terminal-border, rgba(0,0,0,.20)); background: var(--terminal-bg, #04100c); color: var(--terminal-fg, #f4f7e8); overflow: hidden; box-sizing: border-box; }
+      .terminal .xterm { height: 100%; width: 100%; padding: 0; }
+      .terminal .xterm-viewport, .terminal .xterm-screen { background: var(--terminal-bg, #04100c) !important; color: var(--terminal-fg, #f4f7e8) !important; }
+      .terminal .xterm-viewport { overflow-y: auto !important; scrollbar-gutter: stable; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #1f5f48 #071512; }
+      .terminal .xterm-viewport::-webkit-scrollbar { width: 10px; }
+      .terminal .xterm-viewport::-webkit-scrollbar-track { background: #071512; border-left: 1px solid rgba(255,255,255,.05); }
+      .terminal .xterm-viewport::-webkit-scrollbar-thumb { background: #1f5f48; border-radius: 999px; border: 2px solid #071512; }
+      .terminal .xterm-viewport::-webkit-scrollbar-thumb:hover { background: #2b8060; }
+      .rail { min-height: 0; display: flex; flex-direction: column; gap: 0; }
+      .rail-card { min-height: 0 !important; height: 100%; flex: 1 1 auto; border-radius: 10px; padding: 3px; background: #071512; border-color: #22372f; overflow: hidden; }
+      .rail-tabs { flex: 0 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin-bottom: 3px; padding: 2px; border: 1px solid #22372f; border-radius: 8px; background: #0a1714; }
+      .rail-tab { height: 24px; border-radius: 6px; font-size: 10.5px; font-family: inherit; color: #b9c6bf; }
+      .rail-tab.active { border: 1px solid #385247; background: #1a2b27; color: #eef7f0; }
+      .rail-panel { min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 3px; border: 1px solid #22372f; border-radius: 8px; background: #081310; padding: 5px; }
+      .rail-panel.hidden { display: none !important; }
+      .rail-head { flex: 0 0 28px; height: 28px; min-height: 28px; display: flex; flex-wrap: nowrap; align-items: center; gap: 3px; border: 1px solid #22372f; background: #0a1714; border-radius: 8px; padding: 2px 3px; color: #aebdb4; font-size: 10px; overflow: hidden; }
+      .rail-head strong { font-size: 10px; font-weight: 600; color: #d7e1da; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+      .chip { border-color: #22372f; background: #16231f; color: #aebdb4; border-radius: 6px; padding: 1px 5px; font-size: 9.5px; }
+      .rail-search input, .input-compact, .file-write-box textarea, .mini-select { border-color: #22372f; background: #0b1512; border-radius: 7px; color: #d7e1da; font-size: 10px; }
+      .rail-search input { height: 26px; padding: 0 8px; }
+      .rail-body { min-height: 0; flex: 1 1 auto; overflow: auto; padding-right: 3px; padding-bottom: 6px; align-content: start; grid-auto-rows: min-content; }
+      .cmd-row, .history-row, .preset-section, .file-row { border-color: #22372f !important; background: #0d1815 !important; border-radius: 8px !important; }
+      .cmd-actions { gap: 3px; }
+      .cmd-actions .btn { height: 22px; min-height: 22px; padding: 0 5px; font-size: 9.5px; border-radius: 6px; }
+      .rail-head .mini-select { height: 22px; max-width: 50px; padding: 0 3px; }
+      #click-mode { max-width: 58px; }
+      .rail-head .btn { height: 22px; min-height: 22px; padding: 0 5px; }
+      .rail-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .rail-tab { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; font-weight: 700; }
+      .rail-tab-icon { opacity: .78; font-size: 12px; line-height: 1; }
+      .rail-count { min-width: 18px; height: 16px; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; background: #20332d; color: #dff7ea; font-size: 9px; }
+      .rail-head strong { display: inline-flex; align-items: center; gap: 3px; flex: 1 1 auto; }
+      .rail-head-icon { color: #a9beb3; font-size: 11px; }
+      .rail-scope { padding: 1px 5px; border-radius: 5px; background: #1a2b27; color: #dff7ea; }
+      .rail-head > .cmd-actions { margin-left: auto; display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto; flex-wrap: nowrap; }
+      .dropdown-menu { background: #05070b; border-color: rgba(255,255,255,.08); z-index: 200; }
+      .action-menu { min-width: 150px; max-width: 180px; display: grid; grid-template-columns: 1fr; gap: 5px; }
+      .action-menu.hidden { display: none !important; }
+      .action-menu .btn { width: 100%; justify-content: flex-start; text-align: left; }
+      .cmd-row {
+        min-height: 32px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 5px 4px 8px;
+        cursor: pointer;
+      }
+      .cmd-row:hover { background: #12231d !important; border-color: #385247 !important; }
+      .cmd-main { min-width: 0; display: grid; gap: 2px; }
+      .cmd-text { color: #f3f6eb; font-weight: 700; font-size: 11px; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .cmd-sub { display: none; color: #9fb2a8; font-size: 10px; line-height: 1; }
+      .cmd-row .cmd-actions { justify-content: flex-end; flex-wrap: nowrap; gap: 3px; }
+      .cmd-icon {
+        width: 22px;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 !important;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 7px !important;
+        font-size: 10px !important;
+        line-height: 1;
+      }
+      .cmd-count { min-width: 22px; height: 22px; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; background: #16231f; border: 1px solid #22372f; color: #d7e1da; font-size: 9px; }
+      details.preset-section { padding: 0 !important; overflow: hidden; }
+      details.preset-section summary { min-height: 28px; padding: 0 8px; font-size: 10.5px; }
+      details.preset-section .cmd-row { margin: 0 4px 4px; }
+      .section-title { font-weight: 700; }
+      .xterm-screen { transform: translateY(0) !important; }
+      .terminal .xterm-rows { top: 0 !important; }
+
+      .toolbar { height: 44px; min-height: 44px; padding: 4px 6px; gap: 5px; overflow: visible; flex-wrap: nowrap; align-content: center; }
+      .toolbar .btn { min-width: 0; padding: 0 8px; transition: background .15s ease, border-color .15s ease, color .15s ease, opacity .15s ease; }
+      .btn:disabled { opacity: .42; color: #6f8178; border-color: rgba(255,255,255,.05); background: rgba(255,255,255,.025); cursor: not-allowed; }
+      .btn.primary, .btn.active { background: #173f2e; border-color: #6bd795; color: #f1fff6; box-shadow: inset 0 0 0 1px rgba(124,239,168,.18); }
+      .btn.danger { background: rgba(91,25,25,.45); border-color: rgba(242,120,120,.65); color: #ffd0d0; }
+      .btn.warn { background: rgba(108,82,15,.35); border-color: rgba(240,199,92,.5); color: #ffe7a6; }
+      .quickbar { display: none !important; }
+      .tabs { flex: 0 0 auto; max-width: none; min-width: 0; height: 32px; padding: 1px; border: 1px solid rgba(255,255,255,.07); border-radius: 10px; background: rgba(0,0,0,.20); }
+      .tab { max-width: 230px; padding: 0 12px; font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+      .tab.pinned::before { content: '★ '; color: #f6f37b; }
+      .cwd-pills { flex: 0 0 auto; }
+      .cwd-pills .btn { min-width: 54px; }
+      .system-info { flex: 0 0 auto; display: inline-flex; gap: 3px; align-items: center; min-width: 0; }
+      .sys-chip { height: 24px; min-width: 0; padding: 0 6px; display: inline-flex; align-items: center; gap: 3px; border: 1px solid rgba(255,255,255,.08); border-radius: 7px; background: rgba(0,0,0,.24); color: #aebdb4; font-size: 10px; line-height: 1; white-space: nowrap; }
+      .sys-chip strong { color: #e7fff0; font-weight: 800; }
+      .sys-chip.hot strong { color: #ffd0d0; }
+      .sys-chip.warn strong { color: #ffe7a6; }
+      .pane-head { display: none !important; }
+      .pane-title { gap: 5px; }
+      .pane-title strong { font-size: 12px; }
+      .pane-title select { height: 26px; max-width: 120px; border-radius: 9px; padding: 0 8px; background: #092019; border: 1px solid #2e5a45; }
+      .pane-meta { gap: 4px; flex-wrap: nowrap; margin-left: auto; }
+      .pane-meta .chip { font-size: 9px; letter-spacing: .16em; }
+      .pane-meta .btn { height: 26px; min-height: 26px; padding: 0 8px; }
+      .file-tools { display: grid; grid-template-columns: auto auto auto minmax(0,1fr) auto; gap: 4px; align-items: center; }
+      .file-tools .btn { min-width: 0; padding: 0 6px; }
+      .file-tools input[type=file] { min-width: 0; width: 100%; font-size: 10px; }
+      .file-write-box { display: grid !important; grid-template-columns: minmax(0,1fr) auto; gap: 5px; }
+      .file-write-box textarea { grid-column: 1 / -1; min-height: 70px !important; resize: vertical; }
+      .file-write-box .cmd-actions { grid-column: 2; }
+      .file-row { min-height: 34px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px; align-items: center; padding: 5px 6px; }
+      .file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+      .file-row .btn { height: 22px; min-height: 22px; padding: 0 5px; font-size: 9px; }
+      #session-summary { min-height: 0; padding: 6px 8px; display: block; }
+      .pane-card { padding: 0 !important; border: 1px solid #21493a !important; border-radius: 12px !important; background: var(--terminal-bg, #04100c) !important; }
+      .pane-body { padding: 0 !important; }
+      .terminal { border: 0 !important; border-radius: 10px !important; padding: 7px 4px 8px 8px !important; background: var(--terminal-bg, #04100c) !important; }
+      .terminal .xterm-screen, .terminal .xterm-viewport { border-radius: 0 !important; }
+      @media (max-width: 1200px) { html, body { overflow: auto; } .page { height: auto; min-height: 100vh; } .main { grid-template-columns: 1fr; } .pane-card { min-height: 62vh; } .rail-card { min-height: 52vh !important; } }
+    </style>
+  </head>
+  <body class="auth-locked">
+    <section id="auth-page" class="auth-page">
+      <form id="auth-form" class="auth-card" autocomplete="on">
+        <h1 id="auth-title">Rexterm login</h1>
+        <p id="auth-copy">Protected shell access. Login uses a server-side session cookie; no browser popup auth.</p>
+        <div class="auth-form">
+          <div class="auth-field"><label for="auth-user">Username</label><input id="auth-user" name="username" autocomplete="username" required /></div>
+          <div class="auth-field"><label for="auth-pass">Password</label><input id="auth-pass" name="password" type="password" autocomplete="current-password" required /></div>
+          <button id="auth-submit" class="btn primary" type="submit">Login</button>
+          <div id="auth-error" class="auth-error" aria-live="polite"></div>
+        </div>
+        <div class="auth-switch">
+          <button id="auth-mode-toggle" class="btn ghost" type="button">Create account</button>
+          <button id="auth-cancel-setup" class="btn ghost hidden" type="button">Cancel</button>
+        </div>
+        <div class="auth-note">For public exposure, use HTTPS / Cloudflare Tunnel and a strong password.</div>
+      </form>
+    </section>
+    <main id="app-page" class="page" data-parity="hermes-terminal-source-visual-v2">
+      <section class="hero">
+        <div class="hero-left">
+          <div class="logo">
+            <span class="logo-mark">🖥</span>
+            <span class="logo-text">Rexterm</span>
+          </div>
+          <div class="hero-sub">host terminal</div>
+        </div>
+        <div class="hero-metrics">
+          <div class="metric">backend <strong id="metric-status">checking</strong></div>
+          <div class="metric">sessions <strong id="metric-sessions">0</strong></div>
+          <div class="metric">history <strong id="metric-history">0</strong></div>
+          <div class="metric">more <strong id="metric-more">0</strong></div>
+          <div class="metric">previous <strong id="metric-hidden">0</strong></div>
+        </div>
+      </section>
+
+      <section class="toolbar">
+        <section id="tabs" class="tabs"></section>
+        <button id="new-session" class="btn primary" title="New terminal session">New</button>
+        <button id="refresh-sessions" class="btn" title="Refresh sessions/history">Refresh</button>
+        <button id="rename-session" class="btn" title="Rename active tab">Rename</button>
+        <button id="remove-session" class="btn warn" title="Hide active tab locally; backend keeps running">Hide tab</button>
+        <button id="pin-tab" class="btn ghost" title="Pin active tab">Pin</button>
+        <div class="dropdown-wrap">
+          <button id="more-tabs" class="btn ghost" title="Overflow tabs">More 0</button>
+          <div id="more-menu" class="dropdown-menu hidden"></div>
+        </div>
+        <div class="dropdown-wrap">
+          <button id="previous-tabs" class="btn ghost" title="Previously hidden tabs">Previous 0</button>
+          <div id="previous-menu" class="dropdown-menu hidden"></div>
+        </div>
+        <button id="restore-tabs" class="btn ghost" title="Restore hidden tabs">Restore</button>
+        <button id="kill-session" class="btn danger" title="Fully remove active terminal session and kill its tmux shell">Remove</button>
+        <div class="dropdown-wrap">
+          <button id="theme-btn" class="btn ghost" title="Terminal themes">◐ Theme</button>
+          <div id="theme-menu" class="dropdown-menu hidden"></div>
+          <button id="tools-btn" class="btn ghost" title="Terminal tools">Tools</button>
+          <div id="tools-menu" class="dropdown-menu action-menu hidden">
+            <button id="clear-active-output" class="btn ghost" title="Clear terminal view">Clear</button>
+            <button id="copy-screen" class="btn ghost" title="Copy terminal output">Copy</button>
+            <button id="download-transcript" class="btn ghost" title="Save transcript">Save</button>
+            <button id="restart-shell" class="btn danger" title="Restart active shell">Restart</button>
+            <button id="reconnect-stream" class="btn ghost" title="Reconnect websocket">Reconnect</button>
+            <button id="toggle-split" class="btn" title="Split pane">Split off</button>
+            <button id="toggle-focus" class="btn ghost" title="Focus terminal">Focus</button>
+            <button id="launch-profiles-btn" class="btn ghost" title="Launch profiles">Profiles</button>
+            <button id="terminal-settings-btn" class="btn ghost" title="Terminal font and scroll settings">Text</button>
+          </div>
+          <div id="launch-profiles-menu" class="dropdown-menu hidden"></div>
+          <div id="terminal-settings-menu" class="dropdown-menu hidden"></div>
+        </div>
+        <div class="quickbar" title="Quick command: Enter runs, Ctrl+Enter stages">
+          <input id="quick-command" type="text" placeholder="run command" />
+          <button id="quick-stage" class="btn ghost" title="Stage command">Stage</button>
+          <button id="quick-run" class="btn primary" title="Run command">Run</button>
+        </div>
+        <span class="cwd-pills">
+          <button class="btn ghost" data-cwd="/data" title="cd /data">/data</button>
+          <button class="btn ghost" data-cwd="/root" title="cd /root">/root</button>
+          <button class="btn ghost" data-cwd="/mnt/tb" title="cd /mnt/tb">/mnt/tb</button>
+        </span>
+        <span class="spacer"></span>
+        <div class="toolbar-right">
+          <span id="system-info" class="system-info" title="System info refreshes every 5 seconds">
+            <span id="sys-cpu" class="sys-chip">CPU <strong>…</strong></span>
+            <span id="sys-ram" class="sys-chip">RAM <strong>…</strong></span>
+            <span id="sys-temp" class="sys-chip">TEMP <strong>…</strong></span>
+          </span>
+          <div class="dropdown-wrap align-right">
+            <button id="settings-btn" class="btn ghost icon-btn" title="Settings" aria-label="Settings">⚙</button>
+            <div id="auth-settings-menu" class="dropdown-menu auth-settings-menu hidden"></div>
+          </div>
+          <button id="logout-btn" class="btn danger icon-btn" title="Logout" aria-label="Logout">⇥</button>
+        </div>
+        <span class="tiny">Hide tab = local only · Remove = kill/delete tmux session</span>
+      </section>
+
+      <section id="main-layout" class="main">
+        <section class="workbench">
+          <div id="toolbar-banner" class="banner">Loading sessions…</div>
+          <div id="panes" class="panes single"></div>
+        </section>
+
+        <aside class="rail">
+          <section class="rail-card">
+            <div class="rail-tabs">
+              <button class="rail-tab active" data-rail-tab="history"><span class="rail-tab-icon">↺</span><span>History</span><span id="history-tab-count" class="rail-count">0</span></button>
+              <button class="rail-tab" data-rail-tab="presets"><span class="rail-tab-icon">⌘</span><span>Presets</span><span id="preset-tab-count" class="rail-count">0</span></button>
+              <button class="rail-tab" data-rail-tab="files"><span class="rail-tab-icon">▱</span><span>Files</span></button>
+            </div>
+
+            <div id="rail-history" class="rail-panel">
+              <div class="rail-head">
+                <strong><span class="rail-head-icon">↺</span><span class="rail-scope">server</span><span id="history-total" class="chip">0 cmds</span></strong>
+                <div class="cmd-actions">
+                  <select id="history-view" class="mini-select">
+                    <option value="all">All</option>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                  </select>
+                  <select id="click-mode" class="mini-select" title="Click behavior">
+                    <option value="stage">Stage</option>
+                    <option value="run">Run</option>
+                  </select>
+                  <button id="clear-history" class="btn ghost" title="Clear history">Clr</button>
+                </div>
+              </div>
+              <div class="rail-search"><input id="history-search" type="text" placeholder="search commands" /></div>
+              <div id="history-list" class="rail-body"></div>
+            </div>
+
+            <div id="rail-presets" class="rail-panel hidden">
+              <div class="rail-head">
+                <strong><span class="rail-head-icon">⌘</span><span>Presets</span><span id="preset-total" class="chip">0</span></strong>
+                <div class="cmd-actions">
+                  <button id="edit-presets" class="btn ghost">Edit</button>
+                  <button id="reset-presets" class="btn ghost">Defaults</button>
+                </div>
+              </div>
+              <div class="rail-search"><input id="preset-search" type="text" placeholder="search preset commands" /></div>
+              <div id="preset-editor" class="rail-editor hidden">
+                <div class="notice">One section per block. First line = section title, next lines = commands. Blank line starts new section.</div>
+                <textarea id="preset-editor-text"></textarea>
+                <div class="cmd-actions">
+                  <button id="save-presets" class="btn primary">Save presets</button>
+                  <button id="cancel-presets" class="btn ghost">Cancel</button>
+                </div>
+              </div>
+              <div id="preset-list" class="rail-body"></div>
+            </div>
+
+            <div id="rail-files" class="rail-panel hidden">
+              <div class="rail-head">
+                <strong>Files / data <span id="files-cwd" class="chip">/data</span></strong>
+                <button id="refresh-files" class="btn ghost">Scan</button>
+              </div>
+              <div class="cmd-row file-tools">
+                <button id="files-up" class="btn ghost" title="Parent folder">↑</button>
+                <button id="files-cd" class="btn ghost" title="Stage cd here">cd</button>
+                <button id="files-mkdir" class="btn ghost" title="Create folder">＋dir</button>
+                <input id="file-upload" type="file" class="input-compact" />
+                <button id="upload-file" class="btn primary" title="Upload file">⇧</button>
+              </div>
+              <div class="file-write-box cmd-row">
+                <input id="file-write-path" class="input-compact" placeholder="new-file.txt or folder/file.txt" />
+                <div class="cmd-actions"><button id="write-file" class="btn primary" title="Write text file">Write</button></div>
+                <textarea id="file-write-content" placeholder="Write text file content…"></textarea>
+              </div>
+              <div id="file-list" class="rail-body"></div>
+              <div id="session-summary" class="cmd-row"></div>
+            </div>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <script src="/vendor/xterm/xterm.js"></script>
+    <script>
+      const LEGACY_TOKEN = ''; // session-cookie auth is primary; legacy token intentionally not embedded
+      const MAX_VISIBLE_TABS = 4;
+      const TABS_KEY = 'rexterm-visible-tabs';
+      const ACTIVE_KEY = 'rexterm-active-session';
+      const SECONDARY_KEY = 'rexterm-secondary-session';
+      const HIDDEN_KEY = 'rexterm-hidden-tabs';
+      const SPLIT_KEY = 'rexterm-split-enabled';
+      const ACTIVE_PANE_KEY = 'rexterm-active-pane';
+      const OUTPUT_KEY = 'rexterm-output-cache';
+      const DRAFT_KEY = 'rexterm-draft-inputs';
+      const RAIL_TAB_KEY = 'rexterm-right-rail-tab';
+      const HISTORY_VIEW_KEY = 'rexterm-history-view';
+      const COMMAND_CLICK_MODE_KEY = 'rexterm-command-click-mode';
+      const FOCUS_MODE_KEY = 'rexterm-focus-mode';
+      const PINNED_TABS_KEY = 'rexterm-pinned-tabs';
+      const PRESETS = [
+        'pwd',
+        'ls -lah',
+        'clear',
+        'whoami && hostname',
+        'uname -a',
+        'cat /etc/os-release',
+        'df -h',
+        'du -sh /data 2>/dev/null || true',
+        'free -h',
+        'uptime',
+        'ps aux --sort=-%cpu | head -15',
+        'ip addr',
+        'ss -ltnp',
+        'docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"',
+        'docker logs --tail=80 rexterm',
+        'docker compose ps',
+        'cd /data && ls -lah',
+        'cd /mnt/tb && ls -lah',
+        'find /data -maxdepth 2 -type f | head -50',
+        'journalctl -n 50 --no-pager 2>/dev/null || true'
+      ];
+      const DEFAULT_PRESET_SECTIONS = [
+        { title: 'Daily', commands: ['pwd', 'clear', 'whoami && hostname', 'uptime', 'date', 'history | tail -30'] },
+        { title: 'Files', commands: ['ls -lah', 'find /data -maxdepth 2 -type f | head -80', 'du -sh /data 2>/dev/null || true', 'cd /data && ls -lah', 'tree -L 2 /data 2>/dev/null || find /data -maxdepth 2 -print | head -100'] },
+        { title: 'Docker', commands: ['docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"', 'docker ps -a --format "table {{.Names}}\t{{.Status}}"', 'docker logs --tail=120 rexterm', 'docker compose ps', 'docker stats --no-stream', 'docker system df'] },
+        { title: 'Rexterm', commands: ['cd /mnt/tb/1Apps/Rexterm && docker compose ps', 'cd /mnt/tb/1Apps/Rexterm && docker compose logs --tail=120 rexterm', 'python -m py_compile /app/app/server.py 2>/dev/null || true', 'tmux -S /data/tmux/rexterm.sock list-sessions 2>/dev/null || true'] },
+        { title: 'System', commands: ['df -h', 'free -h', 'uptime', 'ps aux --sort=-%cpu | head -15', 'ps aux --sort=-%mem | head -15', 'uname -a', 'cat /etc/os-release'] },
+        { title: 'Network', commands: ['ip addr', 'ss -ltnp', 'curl -I http://127.0.0.1:2344/ 2>/dev/null | head', 'getent hosts google.com 2>/dev/null || true'] },
+        { title: 'Logs', commands: ['journalctl -n 100 --no-pager 2>/dev/null || true', 'dmesg | tail -80 2>/dev/null || true', 'docker events --since 10m --until 0s 2>/dev/null | tail -50'] },
+        { title: 'Disk', commands: ['du -xh /data --max-depth=2 2>/dev/null | sort -h | tail -40', 'find /data -type f -printf "%s %p\n" 2>/dev/null | sort -nr | head -30', 'df -ih'] },
+      ];
+      const DEFAULT_LAUNCH_PROFILES = [
+        { title: 'Main shell', session: 'main', startup_command: 'pwd' },
+        { title: 'Root shell', session: 'root-shell', startup_command: 'cd /root && pwd' },
+        { title: 'Repo shell', session: 'repo-shell', startup_command: 'cd /mnt/tb && pwd' },
+        { title: 'Data shell', session: 'data-shell', startup_command: 'cd /data && pwd' },
+      ];
+      const DEFAULT_TERMINAL_SETTINGS = {
+        theme: 'hermes',
+        font_size: 12.5,
+        line_height: 1.08,
+        scrollback: 12000,
+        cursor_blink: true,
+      };
+      const TERMINAL_THEMES = {
+        hermes: { label: 'Hermes green', description: 'default green phosphor', background: '#020503', foreground: '#d9ffe7', cursor: '#f6f37b', selectionBackground: '#234238' },
+        green: { label: 'Soft green', description: 'cool green shell', background: '#04110b', foreground: '#b9f7cb', cursor: '#8ef0a8', selectionBackground: '#214333' },
+        amber: { label: 'Amber', description: 'warm CRT amber', background: '#0c0904', foreground: '#ffd58a', cursor: '#ffb347', selectionBackground: '#4b3413' },
+        mono: { label: 'Mono', description: 'clean white on black', background: '#050505', foreground: '#f1f1f1', cursor: '#ffffff', selectionBackground: '#3a3a3a' },
+        midnight: { label: 'Midnight', description: 'deep blue-black', background: '#030711', foreground: '#b8d4ff', cursor: '#7db2ff', selectionBackground: '#17335c' },
+        obsidian: { label: 'Obsidian', description: 'charcoal glass', background: '#0a0b0f', foreground: '#d6d9e0', cursor: '#9aa4ff', selectionBackground: '#2b3050' },
+        amoled: { label: 'AMOLED', description: 'true black high contrast', background: '#000000', foreground: '#f5f7fa', cursor: '#7cefa8', selectionBackground: '#1b2d26' },
+        forest: { label: 'Forest', description: 'dark pine terminal', background: '#04120e', foreground: '#c7f5de', cursor: '#72e2aa', selectionBackground: '#173b2f' },
+        cobalt: { label: 'Cobalt', description: 'retro cobalt blue', background: '#081a3a', foreground: '#d7e8ff', cursor: '#ffd15c', selectionBackground: '#244d8f' },
+      };
+      const TERMINAL_THEME_KEYS = Object.keys(TERMINAL_THEMES);
+
+      const state = {
+        sessions: [],
+        visibleTabs: JSON.parse(localStorage.getItem(TABS_KEY) || '[]'),
+        hiddenTabs: JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]'),
+        pinnedTabs: JSON.parse(localStorage.getItem(PINNED_TABS_KEY) || '[]'),
+        active: localStorage.getItem(ACTIVE_KEY) || '',
+        secondary: localStorage.getItem(SECONDARY_KEY) || '',
+        split: localStorage.getItem(SPLIT_KEY) === '1',
+        activePane: localStorage.getItem(ACTIVE_PANE_KEY) || 'primary',
+        railTab: localStorage.getItem(RAIL_TAB_KEY) || 'history',
+        historyView: localStorage.getItem(HISTORY_VIEW_KEY) || 'all',
+        commandClickMode: localStorage.getItem(COMMAND_CLICK_MODE_KEY) || 'stage',
+        focusMode: localStorage.getItem(FOCUS_MODE_KEY) === '1',
+        outputs: {}, // do not restore stale terminal buffers; Hermes terminal opens clean from backend stream
+        drafts: JSON.parse(localStorage.getItem(DRAFT_KEY) || '{"primary":"","secondary":""}'),
+        sharedHistory: [],
+        polling: null,
+        sockets: {},
+        terminals: {},
+        terminalResizeObservers: {},
+        terminalDimensions: {},
+        authMode: 'login',
+        currentUser: '',
+        lineBuffers: {},
+        presetSections: JSON.parse(JSON.stringify(DEFAULT_PRESET_SECTIONS)),
+        launchProfiles: JSON.parse(JSON.stringify(DEFAULT_LAUNCH_PROFILES)),
+        terminalSettings: JSON.parse(JSON.stringify(DEFAULT_TERMINAL_SETTINGS)),
+        pinnedCommands: [],
+        files: { cwd: '', parent: '', items: [] },
+      };
+
+      for (const id of Object.keys(state.outputs || {})) {
+        state.outputs[id] = String(state.outputs[id] || '').replace(/^\[rexterm websocket attached:.*\]\r?\n?/gm, '');
+      }
+
+      const $ = (id) => document.getElementById(id);
+      const tabsEl = $('tabs');
+      const panesEl = $('panes');
+      const bannerEl = $('toolbar-banner');
+      const historyListEl = $('history-list');
+      const presetListEl = $('preset-list');
+      const sessionSummaryEl = $('session-summary');
+      const presetSearchEl = $('preset-search');
+      const historySearchEl = $('history-search');
+      const historyViewEl = $('history-view');
+      const clickModeEl = $('click-mode');
+      const quickCommandEl = $('quick-command');
+      const fileListEl = $('file-list');
+      const filesCwdEl = $('files-cwd');
+      const presetEditorEl = $('preset-editor');
+      const presetEditorTextEl = $('preset-editor-text');
+
+      function normalizeTerminalSettings(raw = {}) {
+        const value = raw && typeof raw === 'object' ? raw : {};
+        const theme = TERMINAL_THEME_KEYS.includes(String(value.theme || '')) ? String(value.theme) : DEFAULT_TERMINAL_SETTINGS.theme;
+        const fontSize = Number(value.font_size);
+        const lineHeight = Number(value.line_height);
+        const scrollback = Number(value.scrollback);
+        return {
+          theme,
+          font_size: Number.isFinite(fontSize) ? Math.max(10, Math.min(fontSize, 24)) : DEFAULT_TERMINAL_SETTINGS.font_size,
+          line_height: Number.isFinite(lineHeight) ? Math.max(1, Math.min(lineHeight, 1.8)) : DEFAULT_TERMINAL_SETTINGS.line_height,
+          scrollback: Number.isFinite(scrollback) ? Math.max(1000, Math.min(Math.round(scrollback), 50000)) : DEFAULT_TERMINAL_SETTINGS.scrollback,
+          cursor_blink: value.cursor_blink == null ? DEFAULT_TERMINAL_SETTINGS.cursor_blink : !!value.cursor_blink,
+        };
+      }
+
+      function terminalTheme(themeName) {
+        const key = String(themeName || 'hermes');
+        const theme = TERMINAL_THEMES[key] || TERMINAL_THEMES.hermes;
+        return {
+          background: theme.background,
+          foreground: theme.foreground,
+          cursor: theme.cursor,
+          selectionBackground: theme.selectionBackground,
+        };
+      }
+
+      function applyThemeStyles() {
+        const themeName = normalizeTerminalSettings(state.terminalSettings).theme;
+        const theme = TERMINAL_THEMES[themeName] || TERMINAL_THEMES.hermes;
+        document.documentElement.style.setProperty('--terminal-bg', theme.background);
+        document.documentElement.style.setProperty('--terminal-fg', theme.foreground);
+        document.documentElement.style.setProperty('--terminal-border', theme.selectionBackground || 'rgba(0,0,0,.20)');
+      }
+
+      function terminalOptions() {
+        const settings = normalizeTerminalSettings(state.terminalSettings);
+        state.terminalSettings = settings;
+        return {
+          cursorBlink: settings.cursor_blink,
+          convertEol: false,
+          fontFamily: 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+          fontSize: settings.font_size,
+          lineHeight: settings.line_height,
+          scrollback: settings.scrollback,
+          theme: terminalTheme(settings.theme),
+        };
+      }
+
+      function saveState() {
+        localStorage.setItem(TABS_KEY, JSON.stringify(state.visibleTabs));
+        localStorage.setItem(HIDDEN_KEY, JSON.stringify(state.hiddenTabs));
+        localStorage.setItem(PINNED_TABS_KEY, JSON.stringify(state.pinnedTabs || []));
+        localStorage.setItem(ACTIVE_KEY, state.active || '');
+        localStorage.setItem(SECONDARY_KEY, state.secondary || '');
+        if (state.split) localStorage.setItem(SPLIT_KEY, '1');
+        else localStorage.removeItem(SPLIT_KEY);
+        localStorage.setItem(ACTIVE_PANE_KEY, state.activePane);
+        localStorage.setItem(RAIL_TAB_KEY, state.railTab);
+        localStorage.setItem(HISTORY_VIEW_KEY, state.historyView);
+        localStorage.setItem(COMMAND_CLICK_MODE_KEY, state.commandClickMode);
+        localStorage.setItem(FOCUS_MODE_KEY, state.focusMode ? '1' : '0');
+        localStorage.removeItem(OUTPUT_KEY);
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(state.drafts));
+      }
+
+      async function api(path, opts = {}) {
+        const headers = Object.assign({}, opts.headers || {});
+        if (LEGACY_TOKEN) headers['X-Rexterm-Token'] = LEGACY_TOKEN;
+        const res = await fetch(path, Object.assign({}, opts, { headers, credentials: 'same-origin' }));
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401 && data.authenticated === false) {
+          showLogin(data.error || 'Login required.');
+          throw new Error(data.error || 'Unauthorized');
+        }
+        if (!res.ok || data.ok === false) throw new Error(data.error || ('request failed: ' + res.status));
+        return data;
+      }
+
+      function setAuthMode(mode = 'login', config = {}) {
+        state.authMode = mode === 'setup' ? 'setup' : 'login';
+        const setup = state.authMode === 'setup';
+        const setupRequired = !!config.setup_required;
+        $('auth-title').textContent = setup ? (setupRequired ? 'Create Rexterm account' : 'Change Rexterm account') : 'Rexterm login';
+        $('auth-copy').textContent = setup
+          ? (setupRequired
+              ? 'Create the first account. This is only allowed on first boot.'
+              : 'Enter current password + new credentials. Account change requires being logged in.')
+          : 'Protected shell access. Login uses a server-side session cookie; no browser popup auth.';
+        $('auth-submit').textContent = setup ? (setupRequired ? 'Create account' : 'Change account') : 'Login';
+        $('auth-mode-toggle').textContent = 'Create account';
+        $('auth-mode-toggle')?.classList.toggle('hidden', !setupRequired);
+        $('auth-cancel-setup')?.classList.toggle('hidden', !setup || !setupRequired);
+        if (config.username && !$('auth-user').value) $('auth-user').value = config.username;
+      }
+
+      function showLogin(message = '', config = {}) {
+        document.body.classList.add('auth-locked');
+        setAuthMode(config.setup_required ? 'setup' : 'login', config);
+        const err = $('auth-error');
+        if (err) err.textContent = message;
+        setTimeout(() => $('auth-user')?.focus(), 30);
+      }
+
+      function hideLogin() {
+        document.body.classList.remove('auth-locked');
+        const err = $('auth-error');
+        if (err) err.textContent = '';
+      }
+
+      function setAuthSettingsMessage(message = '', ok = false) {
+        const el = $('auth-settings-error');
+        if (!el) return;
+        el.textContent = message;
+        el.classList.toggle('auth-settings-ok', !!ok);
+      }
+
+      function renderAuthSettingsMenu() {
+        const menu = $('auth-settings-menu');
+        if (!menu) return;
+        const user = state.currentUser || 'current';
+        menu.innerHTML = `
+          <div class="auth-settings-head">
+            <div>
+              <div class="auth-settings-title">Settings</div>
+              <div class="auth-settings-user">User: ${escapeHtml(user)}</div>
+            </div>
+          </div>
+          <div class="auth-settings-section">
+            <div class="auth-settings-label">Change username</div>
+            <form id="change-username-form" class="auth-settings-form">
+              <div class="auth-settings-row">
+                <input id="change-username-new" type="text" placeholder="new username" autocomplete="username" required />
+                <button class="btn primary" type="submit">Save</button>
+              </div>
+            </form>
+          </div>
+          <div class="auth-settings-section">
+            <div class="auth-settings-label">Change password</div>
+            <form id="change-password-form" class="auth-settings-form">
+              <input id="change-password-current" type="password" placeholder="current password" autocomplete="current-password" required />
+              <div class="auth-settings-row">
+                <input id="change-password-new" type="password" placeholder="new password" autocomplete="new-password" minlength="8" required />
+                <button class="btn primary" type="submit">Save</button>
+              </div>
+              <div class="auth-settings-note">Password change still checks current password.</div>
+            </form>
+          </div>
+          <div id="auth-settings-error" class="auth-settings-error"></div>
+        `;
+        $('change-username-form')?.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          try {
+            await changeUsername($('change-username-new')?.value || '');
+            if ($('change-username-new')) $('change-username-new').value = '';
+            renderAuthSettingsMenu();
+            setAuthSettingsMessage('Username updated.', true);
+          } catch (err) {
+            setAuthSettingsMessage(err.message || String(err));
+          }
+        });
+        $('change-password-form')?.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          try {
+            await changePassword($('change-password-current')?.value || '', $('change-password-new')?.value || '');
+            if ($('change-password-current')) $('change-password-current').value = '';
+            if ($('change-password-new')) $('change-password-new').value = '';
+            renderAuthSettingsMenu();
+            setAuthSettingsMessage('Password updated.', true);
+          } catch (err) {
+            setAuthSettingsMessage(err.message || String(err));
+          }
+        });
+      }
+
+      async function checkAuth() {
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        const data = await res.json().catch(() => ({}));
+        state.currentUser = data.user || data.username || '';
+        if (!data.auth_required || data.authenticated) {
+          hideLogin();
+          return true;
+        }
+        showLogin(data.setup_required ? 'Create the first Rexterm account.' : '', data);
+        const user = $('auth-user');
+        if (user && data.username && !user.value) user.value = data.username;
+        return false;
+      }
+
+      async function login(username, password) {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) throw new Error(data.error || 'Login failed');
+        state.currentUser = data.user || username;
+        hideLogin();
+        return data;
+      }
+
+      async function setupAccount(username, password) {
+        const res = await fetch('/api/auth/setup', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) throw new Error(data.error || 'Account setup failed');
+        state.currentUser = data.user || username;
+        hideLogin();
+        return data;
+      }
+
+      async function changeUsername(newUsername) {
+        const data = await api('/api/auth/change-username', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ new_username: newUsername }),
+        });
+        state.currentUser = data.user || newUsername;
+        return data;
+      }
+
+      async function changePassword(currentPassword, newPassword) {
+        const data = await api('/api/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+        });
+        state.currentUser = data.user || state.currentUser;
+        return data;
+      }
+
+      async function logout() {
+        try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }); } catch {}
+        Object.values(state.sockets).forEach((entry) => { try { entry.ws?.close(); } catch {} });
+        state.sockets = {};
+        state.currentUser = '';
+        $('auth-settings-menu')?.classList.add('hidden');
+        setAuthMode('login');
+        showLogin('Logged out.');
+      }
+
+      async function savePreferences(extra = {}) {
+        try {
+          await api('/api/terminal/preferences', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(Object.assign({
+              history_view: state.historyView,
+              command_click_mode: state.commandClickMode,
+              focus_mode: state.focusMode,
+              pinned_commands: state.pinnedCommands,
+              preset_sections: state.presetSections,
+              launch_profiles: state.launchProfiles,
+              terminal_settings: normalizeTerminalSettings(state.terminalSettings),
+            }, extra)),
+          });
+        } catch (err) {
+          setBanner(`Preference save failed: ${err.message || err}`);
+        }
+      }
+
+      function fmtPercent(value) {
+        return typeof value === 'number' && Number.isFinite(value) ? `${Math.round(value)}%` : 'n/a';
+      }
+
+      function fmtTemp(value) {
+        return typeof value === 'number' && Number.isFinite(value) ? `${Math.round(value)}°C` : 'n/a';
+      }
+
+      function setChip(id, value, level = '') {
+        const el = $(id);
+        if (!el) return;
+        const strong = el.querySelector('strong');
+        if (strong) strong.textContent = value;
+        el.classList.toggle('warn', level === 'warn');
+        el.classList.toggle('hot', level === 'hot');
+      }
+
+      async function loadSystemInfo() {
+        try {
+          const data = await api('/api/system');
+          const cpu = data.cpu_percent ?? (typeof data.load1 === 'number' ? data.load1 : null);
+          const ram = data.memory?.percent;
+          const temp = data.temperature_c;
+          setChip('sys-cpu', typeof data.cpu_percent === 'number' ? fmtPercent(cpu) : (cpu == null ? 'n/a' : `L${cpu}`), cpu >= 85 ? 'hot' : cpu >= 65 ? 'warn' : '');
+          setChip('sys-ram', fmtPercent(ram), ram >= 90 ? 'hot' : ram >= 75 ? 'warn' : '');
+          setChip('sys-temp', fmtTemp(temp), temp >= 80 ? 'hot' : temp >= 65 ? 'warn' : '');
+        } catch {
+          setChip('sys-cpu', 'n/a');
+          setChip('sys-ram', 'n/a');
+          setChip('sys-temp', 'n/a');
+        }
+      }
+
+      async function loadPreferences() {
+        try {
+          const data = await api('/api/terminal/preferences');
+          const pref = data.preferences || {};
+          if (pref.history_view) state.historyView = String(pref.history_view);
+          if (state.historyView === '25' || state.historyView === '50') state.historyView = 'all';
+          if (pref.command_click_mode) state.commandClickMode = String(pref.command_click_mode);
+          if (typeof pref.focus_mode === 'boolean') state.focusMode = pref.focus_mode;
+          if (Array.isArray(pref.pinned_commands)) state.pinnedCommands = pref.pinned_commands;
+          if (Array.isArray(pref.preset_sections) && pref.preset_sections.length) state.presetSections = pref.preset_sections;
+          if (Array.isArray(pref.launch_profiles) && pref.launch_profiles.length) state.launchProfiles = pref.launch_profiles;
+          if (pref.terminal_settings && typeof pref.terminal_settings === 'object') state.terminalSettings = normalizeTerminalSettings(pref.terminal_settings);
+          saveState();
+        } catch (err) {
+          setBanner(`Preference load skipped: ${err.message || err}`);
+        }
+      }
+
+      function wsUrl(sessionId) {
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        return `${proto}//${location.host}/api/terminal/ws?session=${encodeURIComponent(sessionId)}`;
+      }
+
+      function socketState(sessionId) {
+        const entry = state.sockets[sessionId];
+        if (!entry) return 'poll fallback';
+        if (entry.ws?.readyState === WebSocket.OPEN) return 'ws open';
+        if (entry.ws?.readyState === WebSocket.CONNECTING) return 'ws connecting';
+        return 'ws closed';
+      }
+
+      function updateOutputNode(sessionId, text = null) {
+        ['primary', 'secondary'].forEach((pane) => {
+          if (activeSessionForPane(pane) !== sessionId) return;
+          const term = state.terminals[pane];
+          if (term && text != null) {
+            term.write(text);
+            return;
+          }
+          const out = $(`output-${pane}`);
+          if (out && !term) {
+            out.textContent = state.outputs[sessionId] || '';
+            out.scrollTop = out.scrollHeight;
+          }
+        });
+      }
+
+      function ensureSocket(sessionId) {
+        if (!sessionId || typeof WebSocket === 'undefined') return;
+        const existing = state.sockets[sessionId]?.ws;
+        if (existing && (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)) return;
+        const ws = new WebSocket(wsUrl(sessionId));
+        state.sockets[sessionId] = { ws };
+        ws.onopen = () => {
+          setBanner(`WebSocket attached: ${sessionId}`);
+          // Attach is read-only. Sending Ctrl-U/Ctrl-L here caused duplicate prompts,
+          // mid-screen gaps, and visible control garbage in persistent tmux shells.
+          setTimeout(() => resizeTerminalPane('primary', state.active), 30);
+          if (state.split) setTimeout(() => resizeTerminalPane('secondary', state.secondary || state.active), 30);
+          renderPanes();
+        };
+        ws.onmessage = (event) => {
+          const chunk = cleanTerminalOutput(event.data || '');
+          if (!chunk) return;
+          appendOutput(sessionId, chunk);
+          updateOutputNode(sessionId, chunk);
+          saveState();
+        };
+        ws.onerror = () => {
+          setBanner(`WebSocket error on ${sessionId}; HTTP polling remains as fallback.`);
+        };
+        ws.onclose = () => {
+          delete state.sockets[sessionId];
+          renderPanes();
+        };
+      }
+
+      function syncStreams() {
+        const targets = [...new Set([state.active, state.split ? state.secondary : ''].filter(Boolean))];
+        targets.forEach(ensureSocket);
+      }
+
+      function sendResizeFrame(sessionId, cols, rows) {
+        const safeCols = Math.max(20, Math.min(Number(cols) || 120, 300));
+        const safeRows = Math.max(5, Math.min(Number(rows) || 32, 120));
+        const key = `${sessionId}:${safeCols}x${safeRows}`;
+        if (state.terminalDimensions[sessionId] === key) return;
+        state.terminalDimensions[sessionId] = key;
+        const ws = state.sockets[sessionId]?.ws;
+        if (ws?.readyState === WebSocket.OPEN) {
+          try { ws.send(`\x1b[RESIZE:${safeCols};${safeRows}]`); return; } catch {}
+        }
+        api('/api/terminal/resize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session: sessionId, cols: safeCols, rows: safeRows }),
+        }).catch(() => {});
+      }
+
+      function measureTerminal(host, term) {
+        const dims = term?._core?._renderService?.dimensions;
+        const cellWidth = Number(dims?.css?.cell?.width || dims?.actualCellWidth || 0) || 7.4;
+        const cellHeight = Number(dims?.css?.cell?.height || dims?.actualCellHeight || 0) || 13.5;
+        const styles = getComputedStyle(host);
+        const padX = parseFloat(styles.paddingLeft || '0') + parseFloat(styles.paddingRight || '0');
+        const padY = parseFloat(styles.paddingTop || '0') + parseFloat(styles.paddingBottom || '0');
+        const cols = Math.floor(Math.max(20, (host.clientWidth - padX - 2) / cellWidth));
+        const rows = Math.floor(Math.max(5, (host.clientHeight - padY - 2) / cellHeight));
+        return { cols, rows };
+      }
+
+      function resizeTerminalPane(pane, sessionId) {
+        const host = $(`output-${pane}`);
+        const term = state.terminals[pane];
+        if (!host || !term || !sessionId) return;
+        const { cols, rows } = measureTerminal(host, term);
+        try { term.resize(cols, rows); } catch {}
+        sendResizeFrame(sessionId, cols, rows);
+      }
+
+      function sendSocketKeepalive() {
+        if (state.active) resizeTerminalPane('primary', state.active);
+        if (state.split && state.secondary) resizeTerminalPane('secondary', state.secondary);
+      }
+
+      function sendToSocket(sessionId, data) {
+        const ws = state.sockets[sessionId]?.ws;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(data);
+          return true;
+        }
+        return false;
+      }
+
+      async function sendRawToSession(sessionId, data) {
+        if (!sessionId || !data) return false;
+        // Use authenticated HTTP writes as the authoritative input path.
+        // The websocket remains the low-latency output stream; HTTP write avoids silent
+        // input loss behind proxies/browsers that report OPEN but drop client frames.
+        await api('/api/terminal/write', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session: sessionId, data }),
+        });
+        return true;
+      }
+
+      async function rememberPrintable(command) {
+        const printable = String(command || '').replace(/\n+$/g, '').trim();
+        if (!printable) return;
+        await api('/api/terminal/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: printable }),
+        });
+        await loadHistory();
+      }
+
+      function escapeHtml(text) {
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function cleanTerminalOutput(text) {
+        return String(text || '').replace(/(?:[;0-9]*[cR]){3,}/g, '');
+      }
+
+      function isBrowserTerminalControl(data) {
+        const value = String(data || '');
+        // xterm.js answers tmux/readline device-status queries in-browser. If those
+        // replies are forwarded to bash they show up as junk like "1;2c0;276;0c".
+        return /^\x1b\[(?:\?|>)?[0-9;]*[cn]$/.test(value)
+          || /^\x1b\][\s\S]*(?:\x07|\x1b\\)$/.test(value);
+      }
+
+      function buttonStop(handler) {
+        return (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          handler();
+        };
+      }
+
+      function syncHistorySearchFromLine(pane) {
+        // Mirror live terminal typing into History search, but never steal focus from xterm.
+        if (state.railTab !== 'history' || !historySearchEl) return;
+        const line = String(state.lineBuffers[pane] || '').trim();
+        if (historySearchEl.value === line) return;
+        historySearchEl.value = line;
+        renderHistory();
+      }
+
+      function handleCommandClick(command) {
+        if (state.commandClickMode === 'run') return sendCommandForPane(state.activePane, command + '\n').catch((err) => setBanner(String(err)));
+        stageCommand(command);
+      }
+
+      function remoteSessionMap() {
+        return new Map(state.sessions.map((s) => [s.id, s]));
+      }
+
+      function sessionById(id) {
+        return state.sessions.find((s) => s.id === id) || null;
+      }
+
+      function visibleSessionIds() {
+        const map = remoteSessionMap();
+        const pins = (state.pinnedTabs || []).filter((id) => map.has(id) && !state.hiddenTabs.includes(id));
+        const ordered = [...pins, ...state.visibleTabs.filter((id) => map.has(id) && !state.hiddenTabs.includes(id) && !pins.includes(id))];
+        for (const session of state.sessions) {
+          if (!state.hiddenTabs.includes(session.id) && !ordered.includes(session.id)) ordered.push(session.id);
+        }
+        return ordered.slice(0, MAX_VISIBLE_TABS);
+      }
+
+      function overflowSessionIds() {
+        const visible = new Set(visibleSessionIds());
+        return state.sessions
+          .map((s) => s.id)
+          .filter((id) => !state.hiddenTabs.includes(id) && !visible.has(id));
+      }
+
+      function previousSessionIds() {
+        const map = remoteSessionMap();
+        return state.hiddenTabs.filter((id) => map.has(id));
+      }
+
+      function allVisibleOrderedIds() {
+        return [...visibleSessionIds(), ...overflowSessionIds()];
+      }
+
+      function ensureSelections() {
+        const visible = visibleSessionIds();
+        if (!state.active || !visible.includes(state.active)) state.active = visible[0] || '';
+        if (state.split) {
+          if (visible.length < 2) {
+            state.split = false;
+            state.secondary = '';
+          }
+          if (!state.secondary || !visible.includes(state.secondary) || state.secondary === state.active) {
+            state.secondary = visible.find((id) => id !== state.active) || state.active || '';
+          }
+          if (state.secondary === state.active) state.split = false;
+        } else if (state.secondary === state.active) {
+          state.secondary = visible.find((id) => id !== state.active) || '';
+        }
+        state.visibleTabs = allVisibleOrderedIds();
+      }
+
+      function setMetric(id, value) {
+        $(id).textContent = String(value);
+      }
+
+      function setBanner(text) {
+        const value = String(text || '');
+        // Hermes terminal does not keep successful websocket attach banners in the workbench.
+        // Reserve this strip for real operator warnings/errors/recovery notices.
+        if (!value || value.startsWith('WebSocket attached:')) {
+          bannerEl.textContent = '';
+          bannerEl.classList.add('hidden');
+          return;
+        }
+        bannerEl.textContent = value;
+        bannerEl.classList.remove('hidden');
+      }
+
+      function activeSessionForPane(pane) {
+        return pane === 'secondary' ? state.secondary : state.active;
+      }
+
+      function setActivePane(pane) {
+        state.activePane = pane;
+        saveState();
+        renderPanes();
+      }
+
+      function appendOutput(sessionId, text) {
+        if (!sessionId || !text) return;
+        state.outputs[sessionId] = (state.outputs[sessionId] || '') + text;
+        if (state.outputs[sessionId].length > 250000) {
+          state.outputs[sessionId] = state.outputs[sessionId].slice(-150000);
+        }
+      }
+
+      function clearOutput(sessionId) {
+        if (!sessionId) return;
+        state.outputs[sessionId] = '';
+        ['primary', 'secondary'].forEach((pane) => {
+          if (activeSessionForPane(pane) === sessionId) {
+            state.terminals[pane]?.clear();
+            setTimeout(() => {
+              const text = $(`output-${pane}`)?.querySelector('.xterm-rows')?.innerText || '';
+              if (!text.trim()) state.terminals[pane]?.write('root@DietPi: ');
+            }, 300);
+          }
+        });
+        sendRawToSession(sessionId, '\u0015\f').catch(() => {});
+        saveState();
+        renderPanes();
+        setBanner('');
+      }
+
+      function renderTabs() {
+        tabsEl.innerHTML = '';
+        const visible = visibleSessionIds();
+        for (const id of visible) {
+          const session = sessionById(id);
+          const btn = document.createElement('button');
+          const label = session?.label || id;
+          btn.className = 'tab' + (id === state.active ? ' active' : '') + ((state.pinnedTabs || []).includes(id) ? ' pinned' : '');
+          btn.textContent = id === state.active ? `Active terminal: ${label}` : label;
+          btn.title = `Open terminal: ${label}`;
+          btn.onclick = () => openSessionInTabs(id, true);
+          tabsEl.appendChild(btn);
+        }
+        renderSessionMenus();
+      }
+
+      function openSessionInTabs(id, activate = true) {
+        state.hiddenTabs = state.hiddenTabs.filter((x) => x !== id);
+        state.visibleTabs = [id, ...state.visibleTabs.filter((x) => x !== id)];
+        if (activate) {
+          state.active = id;
+          state.activePane = 'primary';
+          if (state.split && state.secondary === id) {
+            state.secondary = visibleSessionIds().find((other) => other !== id) || id;
+          }
+        }
+        ensureSelections();
+        saveState();
+        renderTabs();
+        renderPanes();
+        renderFilesSummary();
+      }
+
+      function toggleMenu(id) {
+        const el = $(id);
+        if (!el) return;
+        el.classList.toggle('hidden');
+      }
+
+      function closeMenus() {
+        ['more-menu', 'previous-menu', 'theme-menu', 'tools-menu', 'launch-profiles-menu', 'terminal-settings-menu'].forEach((id) => $(id)?.classList.add('hidden'));
+      }
+
+      async function applyTheme(theme) {
+        const next = normalizeTerminalSettings(Object.assign({}, state.terminalSettings, { theme }));
+        state.terminalSettings = next;
+        await savePreferences({ terminal_settings: next });
+        renderThemeMenu();
+        renderPanes();
+        setBanner(`Theme applied: ${(TERMINAL_THEMES[next.theme] || TERMINAL_THEMES.hermes).label}`);
+      }
+
+      function renderThemeMenu() {
+        const menu = $('theme-menu');
+        if (!menu) return;
+        menu.classList.add('theme-menu');
+        const active = normalizeTerminalSettings(state.terminalSettings).theme;
+        menu.innerHTML = `
+          <div class="theme-grid">
+            ${TERMINAL_THEME_KEYS.map((key) => {
+              const theme = TERMINAL_THEMES[key];
+              return `
+                <button class="theme-card ${active === key ? 'active' : ''}" data-theme-choice="${key}" title="${theme.label}">
+                  <div class="theme-preview" style="background:${theme.background}; color:${theme.foreground}; border-color:${theme.cursor};"></div>
+                  <strong>${theme.label}</strong>
+                  <span>${theme.description}</span>
+                </button>
+              `;
+            }).join('')}
+          </div>
+        `;
+        menu.querySelectorAll('[data-theme-choice]').forEach((el) => {
+          el.onclick = () => applyTheme(el.getAttribute('data-theme-choice')).catch((err) => setBanner(String(err)));
+        });
+      }
+
+      function sessionMenuRow(id, origin) {
+        const session = sessionById(id);
+        const row = document.createElement('div');
+        row.className = 'dropdown-row';
+        row.innerHTML = `
+          <div class="dropdown-name">${escapeHtml(session?.label || id)} <span class="tiny">${escapeHtml(id)}</span></div>
+          <button class="btn ghost" title="Open">Open</button>
+          <button class="btn ghost" title="Pin/unpin">${(state.pinnedTabs || []).includes(id) ? '★' : '☆'}</button>
+          <button class="btn ghost" title="Rename">✎</button>
+          <button class="btn ghost" title="Hide tab only; shell keeps running">Hide tab</button>
+          <button class="btn danger" title="Fully remove this terminal session">Remove</button>
+        `;
+        const buttons = row.querySelectorAll('button');
+        buttons[0].onclick = () => { closeMenus(); openSessionInTabs(id, true); setBanner(`${origin} session opened: ${id}`); };
+        buttons[1].onclick = () => { closeMenus(); togglePinTab(id); };
+        buttons[2].onclick = async () => { closeMenus(); state.active = id; await renameActive(); };
+        buttons[3].onclick = () => { closeMenus(); state.active = id; removeActiveTab(); };
+        buttons[4].onclick = async () => {
+          if (!confirm(`Fully remove terminal session ${id}? This kills its tmux shell and deletes it from the header.`)) return;
+          await killSession(id);
+          closeMenus();
+        };
+        return row;
+      }
+
+      function renderSessionMenus() {
+        const more = overflowSessionIds();
+        const previous = previousSessionIds();
+        setMetric('metric-more', more.length);
+        setMetric('metric-hidden', previous.length);
+        $('more-tabs').textContent = `More ${more.length}`;
+        $('previous-tabs').textContent = previous.length ? `Previous: ${previous.map((id) => sessionById(id)?.label || id).slice(0,2).join(', ')}` : 'Previous 0';
+        $('restore-tabs').textContent = previous.length ? `Restore ${previous.length}` : 'Restore';
+        $('restore-tabs').disabled = previous.length === 0;
+        $('more-tabs').disabled = more.length === 0;
+        $('previous-tabs').disabled = false;
+
+        const moreMenu = $('more-menu');
+        moreMenu.innerHTML = '';
+        if (!more.length) moreMenu.innerHTML = '<div class="notice">No overflow sessions.</div>';
+        for (const id of more) moreMenu.appendChild(sessionMenuRow(id, 'More'));
+
+        const previousMenu = $('previous-menu');
+        previousMenu.innerHTML = '';
+        if (!previous.length) previousMenu.innerHTML = '<div class="notice">No locally removed sessions.</div>';
+        for (const id of previous) previousMenu.appendChild(sessionMenuRow(id, 'Previous'));
+      }
+
+      function launchProfilesText() {
+        return (state.launchProfiles || []).map((profile) => [profile.title || 'Profile', profile.session || 'session', profile.startup_command || 'pwd', ''].join('\n')).join('\n').trim();
+      }
+
+      function parseLaunchProfilesText(raw) {
+        const blocks = String(raw || '').split(/\n\s*\n+/).map((b) => b.trim()).filter(Boolean);
+        const profiles = [];
+        for (const block of blocks) {
+          const lines = block.split('\n').map((x) => x.trim()).filter(Boolean);
+          if (!lines.length) continue;
+          const title = lines[0].slice(0, 80) || 'Profile';
+          const session = (lines[1] || title).toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^[-._]+|[-._]+$/g, '').slice(0, 48) || 'session';
+          const startup_command = (lines.slice(2).join(' && ') || 'pwd').slice(0, 500);
+          profiles.push({ title, session, startup_command });
+        }
+        return profiles;
+      }
+
+      async function editLaunchProfiles() {
+        const text = prompt('One profile per block:\nline 1 = title\nline 2 = session id\nline 3+ = startup command', launchProfilesText());
+        if (text == null) return;
+        const parsed = parseLaunchProfilesText(text);
+        if (!parsed.length) return setBanner('No valid launch profiles parsed.');
+        state.launchProfiles = parsed;
+        await savePreferences({ launch_profiles: state.launchProfiles });
+        renderLaunchProfilesMenu();
+        setBanner('Launch profiles saved.');
+      }
+
+      async function resetLaunchProfiles() {
+        if (!confirm('Reset launch profiles to defaults?')) return;
+        state.launchProfiles = JSON.parse(JSON.stringify(DEFAULT_LAUNCH_PROFILES));
+        await savePreferences({ launch_profiles: state.launchProfiles });
+        renderLaunchProfilesMenu();
+        setBanner('Launch profiles reset to defaults.');
+      }
+
+      async function createSessionFromProfile(profile) {
+        closeMenus();
+        if (!profile) return;
+        await createSession(profile.session || profile.title || 'session', { startupCommand: profile.startup_command || '' });
+        setBanner(`Opened profile: ${profile.title || profile.session}`);
+      }
+
+      function renderLaunchProfilesMenu() {
+        const menu = $('launch-profiles-menu');
+        if (!menu) return;
+        menu.innerHTML = '';
+        const profiles = state.launchProfiles?.length ? state.launchProfiles : DEFAULT_LAUNCH_PROFILES;
+        for (const profile of profiles) {
+          const row = document.createElement('div');
+          row.className = 'dropdown-row';
+          row.innerHTML = `
+            <div class="dropdown-name">${escapeHtml(profile.title)} <span class="tiny">${escapeHtml(profile.session)}</span></div>
+            <button class="btn primary">Open</button>
+          `;
+          row.querySelector('button').onclick = () => createSessionFromProfile(profile).catch((err) => setBanner(String(err)));
+          menu.appendChild(row);
+        }
+        const footer = document.createElement('div');
+        footer.className = 'dropdown-row';
+        footer.innerHTML = `
+          <div class="dropdown-name">Manage saved launch profiles</div>
+          <button class="btn ghost">Edit</button>
+          <button class="btn ghost">Defaults</button>
+        `;
+        const buttons = footer.querySelectorAll('button');
+        buttons[0].onclick = () => editLaunchProfiles().catch((err) => setBanner(String(err)));
+        buttons[1].onclick = () => resetLaunchProfiles().catch((err) => setBanner(String(err)));
+        menu.appendChild(footer);
+      }
+
+      async function applyTerminalSettingsFromMenu() {
+        const menu = $('terminal-settings-menu');
+        if (!menu) return;
+        const next = normalizeTerminalSettings({
+          theme: menu.querySelector('[name="theme"]')?.value,
+          font_size: menu.querySelector('[name="font_size"]')?.value,
+          line_height: menu.querySelector('[name="line_height"]')?.value,
+          scrollback: menu.querySelector('[name="scrollback"]')?.value,
+          cursor_blink: !!menu.querySelector('[name="cursor_blink"]')?.checked,
+        });
+        state.terminalSettings = next;
+        await savePreferences({ terminal_settings: next });
+        renderSettingsMenu();
+        renderPanes();
+        setBanner('Terminal settings saved.');
+      }
+
+      async function resetTerminalSettings() {
+        if (!confirm('Reset terminal settings to defaults?')) return;
+        state.terminalSettings = JSON.parse(JSON.stringify(DEFAULT_TERMINAL_SETTINGS));
+        await savePreferences({ terminal_settings: state.terminalSettings });
+        renderSettingsMenu();
+        renderPanes();
+        setBanner('Terminal settings reset to defaults.');
+      }
+
+      function renderSettingsMenu() {
+        const menu = $('terminal-settings-menu');
+        if (!menu) return;
+        menu.classList.add('settings-menu');
+        const settings = normalizeTerminalSettings(state.terminalSettings);
+        state.terminalSettings = settings;
+        menu.innerHTML = `
+          <div class="settings-grid">
+            <div class="settings-field">
+              <label for="term-font-size">Font size</label>
+              <input id="term-font-size" name="font_size" class="input-compact" type="number" min="10" max="24" step="0.5" value="${settings.font_size}" />
+            </div>
+            <div class="settings-field">
+              <label for="term-line-height">Line height</label>
+              <input id="term-line-height" name="line_height" class="input-compact" type="number" min="1" max="1.8" step="0.02" value="${settings.line_height}" />
+            </div>
+            <div class="settings-field">
+              <label for="term-scrollback">Scrollback</label>
+              <input id="term-scrollback" name="scrollback" class="input-compact" type="number" min="1000" max="50000" step="500" value="${settings.scrollback}" />
+            </div>
+            <label class="settings-inline"><input name="cursor_blink" type="checkbox" ${settings.cursor_blink ? 'checked' : ''} /> Cursor blink</label>
+            <div class="settings-actions">
+              <button id="term-settings-defaults" class="btn ghost">Defaults</button>
+              <button id="term-settings-save" class="btn primary">Apply</button>
+            </div>
+          </div>
+        `;
+        menu.querySelector('#term-settings-save')?.addEventListener('click', () => applyTerminalSettingsFromMenu().catch((err) => setBanner(String(err))));
+        menu.querySelector('#term-settings-defaults')?.addEventListener('click', () => resetTerminalSettings().catch((err) => setBanner(String(err))));
+      }
+
+      function paneCard(pane, sessionId) {
+        const session = sessionById(sessionId);
+        const output = state.outputs[sessionId] || '';
+        const live = !!session?.alive;
+        const title = pane === 'secondary' ? 'secondary' : 'primary';
+        const visible = visibleSessionIds();
+        const options = visible.map((id) => {
+          const s = sessionById(id);
+          return `<option value="${escapeHtml(id)}" ${id === sessionId ? 'selected' : ''}>${escapeHtml(s?.label || id)}</option>`;
+        }).join('');
+        return `
+          <section class="pane-card" data-pane-card="${pane}">
+            <div class="pane-head">
+              <div class="pane-title">
+                <span class="dot ${live ? 'live' : ''}"></span>
+                <strong>${title}</strong>
+                <select data-pane-select="${pane}">${options}</select>
+              </div>
+              <div class="pane-meta">
+                <span class="chip">${socketState(sessionId)}</span>
+                <span class="chip">${live ? 'alive' : 'dead'}</span>
+                <span class="chip">${sessionId || 'no-session'}</span>
+                <button class="btn ghost" data-focus-pane="${pane}">${state.activePane === pane ? 'focused' : 'focus'}</button>
+              </div>
+            </div>
+            <div class="pane-body">
+              <div id="output-${pane}" class="terminal" data-xterm-pane="${pane}" data-session="${escapeHtml(sessionId)}"></div>
+            </div>
+          </section>
+        `;
+      }
+
+      function bindPaneEvents() {
+        document.querySelectorAll('[data-pane-select]').forEach((el) => {
+          el.onchange = () => {
+            const pane = el.getAttribute('data-pane-select');
+            const id = el.value;
+            if (pane === 'secondary') state.secondary = id;
+            else state.active = id;
+            saveState();
+            renderTabs();
+            renderPanes();
+          };
+        });
+        document.querySelectorAll('[data-focus-pane]').forEach((el) => {
+          el.onclick = () => setActivePane(el.getAttribute('data-focus-pane'));
+        });
+        document.querySelectorAll('[data-send-pane]').forEach((el) => {
+          el.onclick = () => {
+            const pane = el.getAttribute('data-send-pane');
+            const input = $(`input-${pane}`);
+            sendCommandForPane(pane, input.value + '\n');
+          };
+        });
+        document.querySelectorAll('[data-pane-input]').forEach((el) => {
+          const pane = el.getAttribute('data-pane-input');
+          el.value = state.drafts[pane] || '';
+          el.addEventListener('input', () => {
+            state.drafts[pane] = el.value;
+            saveState();
+          });
+          el.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              sendCommandForPane(pane, el.value + '\n');
+            }
+          });
+          el.addEventListener('focus', () => setActivePane(pane));
+        });
+      }
+
+      function mountXtermPane(pane, sessionId) {
+        const host = $(`output-${pane}`);
+        if (!host || !sessionId) return;
+        if (state.terminals[pane]) {
+          try { state.terminalResizeObservers[pane]?.disconnect(); } catch {}
+          delete state.terminalResizeObservers[pane];
+          try { state.terminals[pane].dispose(); } catch {}
+          delete state.terminals[pane];
+        }
+        if (!window.Terminal) {
+          host.textContent = state.outputs[sessionId] || '';
+          return;
+        }
+        const term = new Terminal(terminalOptions());
+        state.terminals[pane] = term;
+        term.open(host);
+        try { term.clear(); } catch {}
+        term.write(state.outputs[sessionId] || '');
+        if (!state.outputs[sessionId]) {
+          setTimeout(() => {
+            const text = host.querySelector('.xterm-rows')?.innerText || '';
+            if (!text.trim()) term.write('root@DietPi: ');
+          }, 350);
+        }
+        term.onData(async (data) => {
+          if (isBrowserTerminalControl(data)) return;
+          state.activePane = pane;
+          saveState();
+          if (!state.lineBuffers[pane]) state.lineBuffers[pane] = '';
+          if (data === '\r' || data === '\n' || data === '\r\n') {
+            const line = state.lineBuffers[pane].trim();
+            state.lineBuffers[pane] = '';
+            if (line) rememberPrintable(line).catch((err) => setBanner(String(err)));
+          } else if (data === '\u007f') {
+            state.lineBuffers[pane] = state.lineBuffers[pane].slice(0, -1);
+            syncHistorySearchFromLine(pane);
+          } else if (data === '\u0015') {
+            state.lineBuffers[pane] = '';
+            syncHistorySearchFromLine(pane);
+          } else if (!data.startsWith('\u001b') && data >= ' ') {
+            state.lineBuffers[pane] += data;
+            syncHistorySearchFromLine(pane);
+          }
+          try { await sendRawToSession(sessionId, data); } catch (err) { setBanner(String(err)); }
+        });
+        host.addEventListener('click', () => { setActivePane(pane); term.focus(); });
+        const ro = new ResizeObserver(() => resizeTerminalPane(pane, sessionId));
+        ro.observe(host);
+        state.terminalResizeObservers[pane] = ro;
+        setTimeout(() => resizeTerminalPane(pane, sessionId), 0);
+        setTimeout(() => resizeTerminalPane(pane, sessionId), 120);
+        setTimeout(() => term.focus(), 30);
+      }
+
+      function renderPanes() {
+        ensureSelections();
+        applyThemeStyles();
+        $('main-layout')?.classList.toggle('focus-mode', state.focusMode);
+        $('toggle-focus').textContent = state.focusMode ? 'Focus on' : 'Focus';
+        $('toggle-focus').classList.toggle('active', state.focusMode);
+        panesEl.className = 'panes ' + (state.split ? 'split' : 'single');
+        const primary = state.active ? paneCard('primary', state.active) : '<section class="pane-card"><div class="pane-body"><div class="notice">No active session.</div></div></section>';
+        const secondary = state.split ? paneCard('secondary', state.secondary || state.active) : '';
+        panesEl.innerHTML = primary + secondary;
+        bindPaneEvents();
+        mountXtermPane('primary', state.active);
+        if (state.split) mountXtermPane('secondary', state.secondary || state.active);
+        $('toggle-split').textContent = `Split ${state.split ? 'on' : 'off'}`;
+        $('toggle-split').classList.toggle('active', state.split);
+        syncStreams();
+      }
+
+      function renderHistory() {
+        const term = historySearchEl.value.trim().toLowerCase();
+        const pins = state.pinnedCommands.map((command) => ({ command, count: 'pin' }));
+        const filtered = state.sharedHistory.filter((item) => item.command.toLowerCase().includes(term));
+        const limit = state.historyView === 'all' ? filtered.length : Number(state.historyView || 50);
+        const items = [...pins.filter((item) => item.command.toLowerCase().includes(term)), ...filtered.slice(0, limit)];
+        $('history-total').textContent = `${state.sharedHistory.length} cmds`;
+        const historyTabCount = $('history-tab-count');
+        if (historyTabCount) historyTabCount.textContent = String(state.sharedHistory.length);
+        if (historyViewEl) historyViewEl.value = state.historyView;
+        historyListEl.innerHTML = items.length ? '' : '<div class="notice">No shared commands yet.</div>';
+        for (const item of items) {
+          const row = document.createElement('div');
+          row.className = 'cmd-row';
+          const isPinned = state.pinnedCommands.includes(item.command);
+          const countLabel = item.count === 'pin' ? 'pin' : `×${item.count}`;
+          row.innerHTML = `
+            <div class="cmd-main">
+              <div class="cmd-text" title="${escapeHtml(item.command)}">${escapeHtml(item.command)}</div>
+              <div class="cmd-sub">${item.count === 'pin' ? 'pinned command' : 'click to ' + state.commandClickMode}</div>
+            </div>
+            <div class="cmd-actions">
+              <button class="btn ghost cmd-icon" title="${isPinned ? 'Unpin' : 'Pin'}">⌖</button>
+              <button class="btn ghost cmd-icon" title="Remove from history">×</button>
+              <span class="cmd-count">${escapeHtml(countLabel)}</span>
+            </div>
+          `;
+          const buttons = row.querySelectorAll('button');
+          row.onclick = () => handleCommandClick(item.command);
+          buttons[0].onclick = buttonStop(() => togglePinCommand(item.command));
+          buttons[1].onclick = buttonStop(() => deleteHistoryCommand(item.command));
+          historyListEl.appendChild(row);
+        }
+      }
+
+      function renderPresets() {
+        const term = presetSearchEl.value.trim().toLowerCase();
+        const sections = state.presetSections && state.presetSections.length ? state.presetSections : DEFAULT_PRESET_SECTIONS;
+        const total = sections.reduce((n, s) => n + (s.commands || []).length, 0);
+        $('preset-total').textContent = `${total}`;
+        const presetTabCount = $('preset-tab-count');
+        if (presetTabCount) presetTabCount.textContent = String(total);
+        presetListEl.innerHTML = '';
+        let rendered = 0;
+        for (const section of sections) {
+          const commands = (section.commands || []).filter((cmd) => cmd.toLowerCase().includes(term));
+          if (!commands.length) continue;
+          rendered += commands.length;
+          const wrap = document.createElement('details');
+          wrap.className = 'preset-section';
+          wrap.open = !!term || section.title === sections[0]?.title;
+          wrap.innerHTML = `<summary class="section-title"><span>${escapeHtml(section.title)}</span><span class="chip">${commands.length}</span></summary>`;
+          for (const cmd of commands) {
+            const row = document.createElement('div');
+            row.className = 'cmd-row';
+            const isPinned = state.pinnedCommands.includes(cmd);
+            row.innerHTML = `
+              <div class="cmd-main">
+                <div class="cmd-text" title="${escapeHtml(cmd)}">${escapeHtml(cmd)}</div>
+                <div class="cmd-sub">click to ${state.commandClickMode}</div>
+              </div>
+              <div class="cmd-actions">
+                <button class="btn ghost cmd-icon" title="${isPinned ? 'Unpin' : 'Pin'}">⌖</button>
+                <button class="btn primary cmd-icon" title="Run now">▶</button>
+              </div>
+            `;
+            const buttons = row.querySelectorAll('button');
+            row.onclick = () => handleCommandClick(cmd);
+            buttons[0].onclick = buttonStop(() => togglePinCommand(cmd));
+            buttons[1].onclick = buttonStop(() => sendCommandForPane(state.activePane, cmd + '\n'));
+            wrap.appendChild(row);
+          }
+          presetListEl.appendChild(wrap);
+        }
+        if (!rendered) presetListEl.innerHTML = '<div class="notice">No matching preset command.</div>';
+      }
+
+      function presetSectionsToText(sections = state.presetSections) {
+        return sections.map((section) => [section.title, ...(section.commands || [])].join('\n')).join('\n\n');
+      }
+
+      function parsePresetText(text) {
+        return String(text || '').split(/\n\s*\n/g).map((block) => {
+          const lines = block.split('\n').map((x) => x.trim()).filter(Boolean);
+          if (!lines.length) return null;
+          return { title: lines[0], commands: lines.slice(1) };
+        }).filter((section) => section && section.commands.length);
+      }
+
+      async function togglePinCommand(command) {
+        if (state.pinnedCommands.includes(command)) state.pinnedCommands = state.pinnedCommands.filter((x) => x !== command);
+        else state.pinnedCommands = [command, ...state.pinnedCommands.filter((x) => x !== command)].slice(0, 50);
+        await savePreferences({ pinned_commands: state.pinnedCommands });
+        renderHistory();
+        renderPresets();
+        setBanner('');
+      }
+
+      async function deleteHistoryCommand(command) {
+        await api('/api/terminal/history?cmd=' + encodeURIComponent(command), { method: 'DELETE' });
+        state.pinnedCommands = state.pinnedCommands.filter((x) => x !== command);
+        await savePreferences({ pinned_commands: state.pinnedCommands });
+        await loadHistory();
+        renderPresets();
+        setBanner('');
+      }
+
+      function openPresetEditor() {
+        presetEditorTextEl.value = presetSectionsToText();
+        presetEditorEl.classList.remove('hidden');
+      }
+
+      async function savePresetEditor() {
+        const sections = parsePresetText(presetEditorTextEl.value);
+        if (!sections.length) return setBanner('Preset editor has no valid sections.');
+        state.presetSections = sections;
+        presetEditorEl.classList.add('hidden');
+        await savePreferences({ preset_sections: state.presetSections });
+        renderPresets();
+        setBanner('Preset sections saved.');
+      }
+
+      async function resetPresetSections() {
+        if (!confirm('Reset preset sections to defaults?')) return;
+        state.presetSections = JSON.parse(JSON.stringify(DEFAULT_PRESET_SECTIONS));
+        await savePreferences({ preset_sections: state.presetSections });
+        renderPresets();
+        setBanner('Preset sections reset to defaults.');
+      }
+
+      function renderFilesSummary() {
+        const visible = visibleSessionIds();
+        const more = overflowSessionIds();
+        const previous = previousSessionIds();
+        sessionSummaryEl.innerHTML = `
+          <div class="cmd-text">Visible: ${visible.length} · More: ${more.length} · Previous: ${previous.length}</div>
+          <div class="notice"><span class="chip warn-chip">root shell</span> Remove only hides a tab locally. Stop terminates the backend shell.</div>
+        `;
+      }
+
+      function fileDisplayPath(path) {
+        return path ? `/data/${path}` : '/data';
+      }
+
+      async function loadFiles(path = state.files.cwd || '') {
+        const data = await api('/api/files/list?path=' + encodeURIComponent(path));
+        state.files = { cwd: data.cwd || '', parent: data.parent || '', items: data.items || [] };
+        renderFiles();
+      }
+
+      function renderFiles() {
+        if (!fileListEl) return;
+        filesCwdEl.textContent = fileDisplayPath(state.files.cwd);
+        fileListEl.innerHTML = '';
+        if (!state.files.items.length) fileListEl.innerHTML = '<div class="notice">No files here.</div>';
+        for (const item of state.files.items) {
+          const row = document.createElement('div');
+          row.className = 'file-row';
+          row.innerHTML = `
+            <div class="file-name">${item.is_dir ? '📁' : '📄'} ${escapeHtml(item.name)} <span class="tiny">${item.is_dir ? 'dir' : `${item.size}b`}</span></div>
+            <div class="cmd-actions">
+              <button class="btn ghost">${item.is_dir ? 'Open' : 'Path'}</button>
+              <button class="btn ghost">cd</button>
+              <button class="btn ghost">Get</button>
+              <button class="btn danger">Del</button>
+            </div>
+          `;
+          const buttons = row.querySelectorAll('button');
+          buttons[0].onclick = () => item.is_dir ? loadFiles(item.path) : copyCommand(fileDisplayPath(item.path));
+          buttons[1].onclick = () => stageCommand(`cd ${item.is_dir ? fileDisplayPath(item.path) : fileDisplayPath(state.files.cwd)} && pwd`);
+          buttons[2].onclick = () => {
+            if (item.is_dir) return stageCommand(`find ${fileDisplayPath(item.path)} -maxdepth 2 -type f | head -50`);
+            window.open('/api/files/download?path=' + encodeURIComponent(item.path), '_blank');
+          };
+          buttons[3].onclick = async () => {
+            if (!confirm(`Delete ${fileDisplayPath(item.path)}? Empty directories only.`)) return;
+            await api('/api/files/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: item.path }) });
+            await loadFiles(state.files.cwd);
+            setBanner(`Deleted ${item.name}.`);
+          };
+          fileListEl.appendChild(row);
+        }
+      }
+
+      async function mkdirFromFiles() {
+        const name = prompt('Folder path under /data?', state.files.cwd ? `${state.files.cwd}/new-folder` : 'new-folder');
+        if (!name) return;
+        await api('/api/files/mkdir', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: name }) });
+        await loadFiles(state.files.cwd);
+        setBanner(`Created folder: ${fileDisplayPath(name)}`);
+      }
+
+      async function uploadSelectedFile() {
+        const input = $('file-upload');
+        const file = input?.files?.[0];
+        if (!file) return setBanner('Choose a file first.');
+        const buf = await file.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let binary = '';
+        for (const b of bytes) binary += String.fromCharCode(b);
+        await api('/api/files/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: state.files.cwd, name: file.name, content_base64: btoa(binary) }) });
+        input.value = '';
+        await loadFiles(state.files.cwd);
+        setBanner(`Uploaded ${file.name}.`);
+      }
+
+      async function writeTextFileFromRail() {
+        const path = $('file-write-path')?.value.trim();
+        if (!path) return setBanner('File path is empty.');
+        const full = state.files.cwd ? `${state.files.cwd}/${path}` : path;
+        await api('/api/files/write', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: full, content: $('file-write-content')?.value || '' }) });
+        await loadFiles(state.files.cwd);
+        setBanner(`Wrote ${fileDisplayPath(full)}.`);
+      }
+
+      function filesCdHere() {
+        stageCommand(`cd ${fileDisplayPath(state.files.cwd)} && pwd`);
+      }
+
+      function setRailTab(tab) {
+        state.railTab = tab;
+        saveState();
+        document.querySelectorAll('.rail-tab').forEach((btn) => btn.classList.toggle('active', btn.dataset.railTab === tab));
+        ['history', 'presets', 'files'].forEach((name) => {
+          $(`rail-${name}`).classList.toggle('hidden', name !== tab);
+        });
+        if (tab === 'files') loadFiles(state.files.cwd || '').catch((err) => setBanner(String(err)));
+      }
+
+      async function loadHistory() {
+        const data = await api('/api/terminal/history');
+        state.sharedHistory = data.items || [];
+        setMetric('metric-history', state.sharedHistory.length);
+        renderHistory();
+      }
+
+      async function refreshSessions() {
+        const data = await api('/api/terminal/sessions');
+        state.sessions = data.sessions || [];
+        if (!state.sessions.length) {
+          await createSession('main');
+          return;
+        }
+        ensureSelections();
+        saveState();
+        setMetric('metric-sessions', state.sessions.length);
+        renderSessionMenus();
+        renderTabs();
+        updatePinButton();
+        renderPanes();
+        renderFilesSummary();
+        setBanner(`Active ${state.active || 'none'}${state.split ? ` · secondary ${state.secondary || 'none'}` : ''} · ${state.split ? 'split view' : 'single view'}`);
+      }
+
+      async function createSession(label, opts = {}) {
+        const raw = label || prompt('Session name?', 'main') || 'main';
+        const data = await api('/api/terminal/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ label: raw, id: raw }),
+        });
+        state.hiddenTabs = state.hiddenTabs.filter((id) => id !== data.session.id);
+        state.active = data.session.id;
+        if (state.split && (!state.secondary || state.secondary === state.active)) {
+          state.secondary = state.visibleTabs.find((id) => id !== state.active) || '';
+        }
+        await refreshSessions();
+        if (opts.startupCommand) {
+          await sendCommandForPane('primary', String(opts.startupCommand).replace(/\n+$/g, '') + '\n');
+        }
+      }
+
+      function copyCommand(command) {
+        navigator.clipboard?.writeText(command).then(
+          () => setBanner(`Copied command: ${command}`),
+          () => setBanner('Clipboard copy failed; command text is visible in the row.')
+        );
+      }
+
+      function stageCommand(command) {
+        const pane = state.activePane || 'primary';
+        const sessionId = activeSessionForPane(pane);
+        if (!sessionId) return;
+        state.lineBuffers[pane] = command;
+        syncHistorySearchFromLine(pane);
+        sendRawToSession(sessionId, '\u0015' + command).catch((err) => setBanner(String(err)));
+        state.terminals[pane]?.focus();
+        setBanner('');
+      }
+
+      async function sendCommandForPane(pane, raw) {
+        const sessionId = activeSessionForPane(pane);
+        const cmd = String(raw || '');
+        if (!sessionId || !cmd) return;
+        await sendRawToSession(sessionId, '\u0015' + cmd);
+        await rememberPrintable(cmd);
+        state.lineBuffers[pane] = '';
+      }
+
+      async function pollOutputs() {
+        clearInterval(state.polling);
+        const run = async () => {
+          const targets = [...new Set([state.active, state.split ? state.secondary : ''].filter(Boolean))];
+          targets.forEach(ensureSocket);
+          for (const sessionId of targets) {
+            try {
+              const ws = state.sockets[sessionId]?.ws;
+              if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) continue;
+              const data = await api('/api/terminal/read?session=' + encodeURIComponent(sessionId));
+              if (data.output) data.output = cleanTerminalOutput(data.output);
+              if (data.output) appendOutput(sessionId, data.output);
+              const session = sessionById(sessionId);
+              if (session) session.alive = !!data.alive;
+              const pane = state.active === sessionId ? 'primary' : (state.secondary === sessionId ? 'secondary' : '');
+              if (pane) updateOutputNode(sessionId, data.output || '');
+            } catch (err) {
+              setBanner(String(err));
+            }
+          }
+          saveState();
+        };
+        await run();
+        state.polling = setInterval(run, 450);
+      }
+
+      async function renameActive() {
+        if (!state.active) return;
+        const current = sessionById(state.active);
+        const label = prompt('New label?', current?.label || state.active);
+        if (!label) return;
+        await api('/api/terminal/rename', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session: state.active, label }),
+        });
+        await refreshSessions();
+      }
+
+      function togglePinTab(id = state.active) {
+        if (!id) return;
+        const pins = state.pinnedTabs || [];
+        state.pinnedTabs = pins.includes(id) ? pins.filter((x) => x !== id) : [id, ...pins.filter((x) => x !== id)].slice(0, 12);
+        state.visibleTabs = [id, ...state.visibleTabs.filter((x) => x !== id)];
+        saveState();
+        renderTabs();
+        renderSessionMenus();
+        updatePinButton();
+      }
+
+      function updatePinButton() {
+        const btn = $('pin-tab');
+        if (!btn) return;
+        const pinned = (state.pinnedTabs || []).includes(state.active);
+        btn.textContent = pinned ? 'Unpin' : 'Pin';
+        btn.classList.toggle('active', pinned);
+        btn.title = pinned ? 'Unpin active tab' : 'Pin active tab';
+      }
+
+      function removeActiveTab() {
+        if (!state.active) return;
+        if ((state.pinnedTabs || []).includes(state.active)) return setBanner('Pinned tab: unpin before hiding.');
+        if (visibleSessionIds().length <= 1) return setBanner('Cannot hide the last visible tab. Use Remove to fully delete the terminal session.');
+        if (!state.hiddenTabs.includes(state.active)) state.hiddenTabs = [state.active, ...state.hiddenTabs.filter((id) => id !== state.active)];
+        state.visibleTabs = state.visibleTabs.filter((id) => id !== state.active);
+        if (state.secondary === state.active) state.secondary = '';
+        state.active = visibleSessionIds().find((id) => id !== state.active) || '';
+        ensureSelections();
+        saveState();
+        renderTabs();
+        renderPanes();
+        renderFilesSummary();
+        renderSessionMenus();
+        updatePinButton();
+        setBanner('Moved active tab to Previous. Backend shell still alive.');
+      }
+
+      function restoreHiddenTabs() {
+        const previous = previousSessionIds();
+        for (const id of previous.reverse()) {
+          state.visibleTabs = [id, ...state.visibleTabs.filter((x) => x !== id)];
+        }
+        state.hiddenTabs = [];
+        ensureSelections();
+        saveState();
+        renderTabs();
+        renderPanes();
+        renderFilesSummary();
+        renderSessionMenus();
+        setBanner(previous.length ? `Restored ${previous.length} previous session(s).` : 'No previous sessions to restore.');
+      }
+
+      async function killSession(sessionId) {
+        if (!sessionId) return;
+        await api('/api/terminal/kill', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session: sessionId }),
+        });
+        state.hiddenTabs = state.hiddenTabs.filter((id) => id !== sessionId);
+        state.visibleTabs = state.visibleTabs.filter((id) => id !== sessionId);
+        delete state.outputs[sessionId];
+        if (state.active === sessionId) state.active = '';
+        if (state.secondary === sessionId) state.secondary = '';
+        await refreshSessions();
+        setBanner(`Removed terminal session: ${sessionId}`);
+      }
+
+      async function killActive() {
+        if (!state.active) return;
+        const label = sessionById(state.active)?.label || state.active;
+        if (!confirm(`Fully remove terminal session ${label}? This kills its tmux shell and removes it from the header.`)) return;
+        await killSession(state.active);
+      }
+
+      async function clearSharedHistory() {
+        if (!confirm('Clear shared server-side history?')) return;
+        await api('/api/terminal/history/clear', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        await loadHistory();
+        setBanner('Shared history cleared.');
+      }
+
+      function commandFromQuick() {
+        return (quickCommandEl?.value || '').trim();
+      }
+
+      function stageQuickCommand() {
+        const cmd = commandFromQuick();
+        if (!cmd) return setBanner('Quick command is empty.');
+        stageCommand(cmd);
+      }
+
+      async function runQuickCommand() {
+        const cmd = commandFromQuick();
+        if (!cmd) return setBanner('Quick command is empty.');
+        await sendCommandForPane(state.activePane, cmd + '\n');
+        quickCommandEl.value = '';
+        setBanner('');
+      }
+
+      function changeCwd(path) {
+        stageCommand(`cd ${path} && pwd`);
+        setBanner('');
+        savePreferences({ default_cwd: path });
+      }
+
+      function copyActiveScreen() {
+        const sessionId = activeSessionForPane(state.activePane);
+        const text = state.outputs[sessionId] || '';
+        if (!text) return setBanner('No terminal output to copy.');
+        navigator.clipboard?.writeText(text).then(
+          () => setBanner(`Copied ${text.length} chars from ${sessionId}.`),
+          () => setBanner('Clipboard copy failed; browser denied permission.')
+        );
+        document.querySelector(`[data-pane-card="${state.activePane}"]`)?.classList.add('screen-copied');
+        setTimeout(() => document.querySelector(`[data-pane-card="${state.activePane}"]`)?.classList.remove('screen-copied'), 650);
+      }
+
+      async function downloadTranscript() {
+        const sessionId = activeSessionForPane(state.activePane);
+        if (!sessionId) return setBanner('No active session to export.');
+        const data = await api('/api/terminal/transcript?session=' + encodeURIComponent(sessionId) + '&max_bytes=262144');
+        const text = String(data.transcript || '');
+        if (!text.trim()) return setBanner('Transcript is empty.');
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${sessionId}-transcript.txt`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1200);
+        setBanner(`Saved transcript for ${sessionId}.`);
+      }
+
+      async function restartActiveShell() {
+        const sessionId = activeSessionForPane(state.activePane);
+        if (!sessionId) return;
+        if (!confirm(`Restart backend shell ${sessionId}? Current process will be killed.`)) return;
+        await killSession(sessionId);
+        await createSession(sessionId);
+        setBanner(`Restarted backend shell: ${sessionId}`);
+      }
+
+      function toggleFocusMode() {
+        state.focusMode = !state.focusMode;
+        saveState();
+        savePreferences({ focus_mode: state.focusMode });
+        renderPanes();
+        setBanner(state.focusMode ? 'Focus mode: rail hidden, terminal expanded.' : 'Focus mode off.');
+      }
+
+      function reconnectStreams() {
+        Object.values(state.sockets).forEach((entry) => {
+          try { entry.ws?.close(); } catch {}
+        });
+        state.sockets = {};
+        syncStreams();
+        setBanner('WebSocket streams reconnecting.');
+      }
+
+      async function boot() {
+        $('auth-form')?.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const btn = $('auth-submit');
+          const err = $('auth-error');
+          if (btn) btn.disabled = true;
+          if (err) err.textContent = '';
+          try {
+            if (state.authMode === 'setup') await setupAccount($('auth-user')?.value || '', $('auth-pass')?.value || '');
+            else await login($('auth-user')?.value || '', $('auth-pass')?.value || '');
+            if ($('auth-pass')) $('auth-pass').value = '';
+            await bootApp();
+          } catch (authErr) {
+            if (err) err.textContent = authErr.message || String(authErr);
+          } finally {
+            if (btn) btn.disabled = false;
+          }
+        });
+        $('auth-mode-toggle')?.addEventListener('click', () => setAuthMode('setup', { setup_required: true }));
+        $('auth-cancel-setup')?.addEventListener('click', () => setAuthMode('login'));
+        if (!(await checkAuth())) return;
+        await bootApp();
+      }
+
+      async function bootApp() {
+        if (state.booted) return;
+        state.booted = true;
+        document.querySelectorAll('.rail-tab').forEach((btn) => {
+          btn.onclick = () => setRailTab(btn.dataset.railTab);
+        });
+        $('new-session').onclick = () => createSession();
+        $('refresh-sessions').onclick = async () => { await refreshSessions(); await loadHistory(); };
+        $('rename-session').onclick = () => renameActive();
+        $('remove-session').onclick = () => removeActiveTab();
+        $('pin-tab').onclick = () => togglePinTab();
+        $('more-tabs').onclick = () => { $('previous-menu').classList.add('hidden'); $('theme-menu').classList.add('hidden'); $('tools-menu').classList.add('hidden'); $('launch-profiles-menu').classList.add('hidden'); $('terminal-settings-menu').classList.add('hidden'); $('auth-settings-menu').classList.add('hidden'); toggleMenu('more-menu'); };
+        $('previous-tabs').onclick = () => { $('more-menu').classList.add('hidden'); $('theme-menu').classList.add('hidden'); $('tools-menu').classList.add('hidden'); $('launch-profiles-menu').classList.add('hidden'); $('terminal-settings-menu').classList.add('hidden'); $('auth-settings-menu').classList.add('hidden'); toggleMenu('previous-menu'); };
+        $('theme-btn').onclick = () => { $('more-menu').classList.add('hidden'); $('previous-menu').classList.add('hidden'); $('tools-menu').classList.add('hidden'); $('launch-profiles-menu').classList.add('hidden'); $('terminal-settings-menu').classList.add('hidden'); $('auth-settings-menu').classList.add('hidden'); renderThemeMenu(); toggleMenu('theme-menu'); };
+        $('tools-btn').onclick = () => { $('more-menu').classList.add('hidden'); $('previous-menu').classList.add('hidden'); $('theme-menu').classList.add('hidden'); $('launch-profiles-menu').classList.add('hidden'); $('terminal-settings-menu').classList.add('hidden'); $('auth-settings-menu').classList.add('hidden'); toggleMenu('tools-menu'); };
+        $('launch-profiles-btn').onclick = () => { $('more-menu').classList.add('hidden'); $('previous-menu').classList.add('hidden'); $('theme-menu').classList.add('hidden'); $('tools-menu').classList.add('hidden'); $('terminal-settings-menu').classList.add('hidden'); $('auth-settings-menu').classList.add('hidden'); renderLaunchProfilesMenu(); toggleMenu('launch-profiles-menu'); };
+        $('terminal-settings-btn').onclick = () => { $('more-menu').classList.add('hidden'); $('previous-menu').classList.add('hidden'); $('theme-menu').classList.add('hidden'); $('tools-menu').classList.add('hidden'); $('launch-profiles-menu').classList.add('hidden'); $('auth-settings-menu').classList.add('hidden'); renderSettingsMenu(); toggleMenu('terminal-settings-menu'); };
+        $('restore-tabs').onclick = () => restoreHiddenTabs();
+        $('kill-session').onclick = () => killActive();
+        $('settings-btn')?.addEventListener('click', () => { $('more-menu').classList.add('hidden'); $('previous-menu').classList.add('hidden'); $('theme-menu').classList.add('hidden'); $('tools-menu').classList.add('hidden'); $('launch-profiles-menu').classList.add('hidden'); $('terminal-settings-menu').classList.add('hidden'); renderAuthSettingsMenu(); toggleMenu('auth-settings-menu'); setAuthSettingsMessage(''); });
+        $('logout-btn')?.addEventListener('click', () => logout());
+        $('clear-active-output').onclick = () => clearOutput(activeSessionForPane(state.activePane));
+        $('copy-screen').onclick = () => copyActiveScreen();
+        $('download-transcript').onclick = () => downloadTranscript().catch((err) => setBanner(String(err)));
+        $('restart-shell').onclick = () => restartActiveShell();
+        $('toggle-focus').onclick = () => toggleFocusMode();
+        $('quick-stage').onclick = () => stageQuickCommand();
+        $('quick-run').onclick = () => runQuickCommand();
+        quickCommandEl?.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter') return;
+          event.preventDefault();
+          if (event.ctrlKey || event.metaKey) stageQuickCommand();
+          else runQuickCommand();
+        });
+        document.querySelectorAll('[data-cwd]').forEach((btn) => {
+          btn.onclick = () => changeCwd(btn.getAttribute('data-cwd'));
+        });
+        $('toggle-split').onclick = () => {
+          if (!state.split && visibleSessionIds().length < 2) {
+            state.split = false;
+            saveState();
+            renderPanes();
+            return setBanner('Split needs a second live session. Use Add or Profiles first.');
+          }
+          state.split = !state.split;
+          ensureSelections();
+          saveState();
+          renderPanes();
+          setBanner(state.split ? 'Split mode enabled.' : 'Split mode disabled.');
+        };
+        $('clear-history').onclick = () => clearSharedHistory();
+        $('reconnect-stream').onclick = () => reconnectStreams();
+        historyViewEl.value = state.historyView;
+        historyViewEl.onchange = () => { state.historyView = historyViewEl.value; saveState(); savePreferences({ history_view: state.historyView }); renderHistory(); };
+        if (clickModeEl) {
+          clickModeEl.value = state.commandClickMode;
+          clickModeEl.onchange = () => {
+            state.commandClickMode = clickModeEl.value;
+            saveState();
+            savePreferences({ command_click_mode: state.commandClickMode });
+            renderHistory();
+            renderPresets();
+          };
+        }
+        historySearchEl.addEventListener('input', renderHistory);
+        presetSearchEl.addEventListener('input', renderPresets);
+        $('edit-presets').onclick = () => openPresetEditor();
+        $('cancel-presets').onclick = () => presetEditorEl.classList.add('hidden');
+        $('save-presets').onclick = () => savePresetEditor();
+        $('reset-presets').onclick = () => resetPresetSections();
+        $('refresh-files').onclick = () => loadFiles(state.files.cwd || '');
+        $('files-up').onclick = () => loadFiles(state.files.parent || '');
+        $('files-cd').onclick = () => filesCdHere();
+        $('files-mkdir').onclick = () => mkdirFromFiles();
+        $('upload-file').onclick = () => uploadSelectedFile();
+        $('write-file').onclick = () => writeTextFileFromRail();
+
+        try {
+          await loadPreferences();
+          renderSettingsMenu();
+          renderThemeMenu();
+          renderAuthSettingsMenu();
+          if (historyViewEl) historyViewEl.value = state.historyView;
+          updatePinButton();
+          if (clickModeEl) clickModeEl.value = state.commandClickMode;
+          const health = await api('/api/health');
+          $('metric-status').textContent = `ok:${health.port}`;
+          await loadSystemInfo();
+          setInterval(loadSystemInfo, 5000);
+          await refreshSessions();
+          await loadHistory();
+          renderPresets();
+          renderLaunchProfilesMenu();
+          setRailTab(state.railTab);
+          await pollOutputs();
+          setInterval(sendSocketKeepalive, 25000);
+        } catch (err) {
+          $('metric-status').textContent = 'down';
+          setBanner(String(err));
+        }
+      }
+
+      boot();
+    </script>
+  </body>
+</html>

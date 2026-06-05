@@ -1,0 +1,11 @@
+data/
+_archive/
+__pycache__/
+app/__pycache__/
+tests/__pycache__/
+.pypytest_cache/
+.pytest_cache/
+*.pyc
+*.bak.*
+node_modules/
+dist/

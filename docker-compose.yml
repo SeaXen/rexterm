@@ -1,0 +1,26 @@
+services:
+  rexterm:
+    build:
+      context: .
+    container_name: rexterm
+    restart: unless-stopped
+    environment:
+      REXTERM_DATA_DIR: /data
+      REXTERM_STATIC_DIR: /app/static
+      REXTERM_SHARED_TOKEN: ${REXTERM_SHARED_TOKEN:-change-me}
+      REXTERM_AUTH_REQUIRED: ${REXTERM_AUTH_REQUIRED:-1}
+      REXTERM_AUTH_USERNAME: ${REXTERM_AUTH_USERNAME:-admin}
+      REXTERM_AUTH_PASSWORD: ${REXTERM_AUTH_PASSWORD:-}
+      REXTERM_AUTH_PASSWORD_SHA256: ${REXTERM_AUTH_PASSWORD_SHA256:-}
+      REXTERM_AUTH_SESSION_TTL: ${REXTERM_AUTH_SESSION_TTL:-604800}
+      REXTERM_BACKEND_PORT: ${REXTERM_BACKEND_PORT:-8080}
+      REXTERM_HISTORY_LIMIT: ${REXTERM_HISTORY_LIMIT:-300}
+    volumes:
+      - ./data:/data
+      - /sys:/host-sys:ro
+      - /usr/local/bin/hermes:/usr/local/bin/hermes:ro
+      - /usr/local/lib/hermes-agent:/usr/local/lib/hermes-agent:ro
+      - /root/.local/share/uv/python:/root/.local/share/uv/python:ro
+      - /root/.hermes:/root/.hermes
+    ports:
+      - "${REXTERM_PORT:-2344}:${REXTERM_BACKEND_PORT:-8080}"
