@@ -40,6 +40,20 @@ Legacy experiments and old frontend work were moved out of the active runtime pa
 - explicit local tab hide/remove vs backend session kill
 - vendored `tmux` fallback for host environments without system tmux
 
+## Screenshots
+
+### Login
+
+![Rexterm login](docs/screenshots/login.png)
+
+### Terminal workspace
+
+![Rexterm terminal workspace](docs/screenshots/terminal.png)
+
+### Settings dropdown
+
+![Rexterm settings dropdown](docs/screenshots/settings.png)
+
 ## Repository layout
 
 ```text
@@ -83,6 +97,17 @@ Ignored runtime/state paths:
 - Docker Compose plugin (`docker compose`)
 
 ## Quick start
+
+### What is created automatically?
+
+On a fresh install:
+- `data/` and its runtime subdirectories are created automatically by the server/scripts
+- tmux/session/auth runtime JSON files are created as needed
+- `.env` is **not** auto-created
+
+So:
+- you can start Rexterm without `.env` because sane defaults exist
+- but for real use, `cp .env.example .env` is still recommended so you can set auth, token, and port explicitly
 
 ### Host mode (recommended for real machine access)
 
@@ -265,6 +290,12 @@ Current backend behavior:
 - prefers system `tmux` if available
 - otherwise auto-detects vendored `tmux`
 - automatically injects the vendored library path when needed
+
+## Versioning
+
+- current version: `v0.1.0`
+- changelog: [`CHANGELOG.md`](CHANGELOG.md)
+- license: [`MIT`](LICENSE)
 
 ## Development
 
