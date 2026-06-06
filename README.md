@@ -1,5 +1,10 @@
 # Rexterm
 
+[![Release](https://img.shields.io/github/v/release/SeaXen/rexterm?display_name=tag)](https://github.com/SeaXen/rexterm/releases)
+[![License](https://img.shields.io/github/license/SeaXen/rexterm)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
+[![Docker](https://img.shields.io/badge/docker-optional-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+
 Rexterm is a standalone browser terminal focused on a simple rule:
 
 - **host mode** = real host shell, real host commands
@@ -117,6 +122,24 @@ cp .env.example .env
 ./scripts/run-host.sh
 ```
 
+Ubuntu one-liner:
+
+```bash
+sudo apt update && sudo apt install -y git python3 tmux && git clone https://github.com/SeaXen/rexterm.git && cd rexterm && cp .env.example .env && ./scripts/run-host.sh
+```
+
+Debian one-liner:
+
+```bash
+sudo apt update && sudo apt install -y git python3 tmux && git clone https://github.com/SeaXen/rexterm.git && cd rexterm && cp .env.example .env && ./scripts/run-host.sh
+```
+
+DietPi one-liner:
+
+```bash
+sudo apt update && sudo apt install -y git python3 tmux && git clone https://github.com/SeaXen/rexterm.git && cd rexterm && cp .env.example .env && ./scripts/run-host.sh
+```
+
 Open:
 
 ```text
@@ -129,6 +152,12 @@ http://127.0.0.1:2344/
 cd /mnt/tb/1Apps/Rexterm
 cp .env.example .env
 docker compose up -d --build --remove-orphans
+```
+
+Docker one-liner:
+
+```bash
+sudo apt update && sudo apt install -y git docker.io docker-compose-plugin && sudo systemctl enable --now docker && git clone https://github.com/SeaXen/rexterm.git && cd rexterm && cp .env.example .env && sudo docker compose up -d --build --remove-orphans
 ```
 
 Open:
@@ -296,6 +325,7 @@ Current backend behavior:
 - current version: `v0.1.0`
 - changelog: [`CHANGELOG.md`](CHANGELOG.md)
 - license: [`MIT`](LICENSE)
+- releases: [GitHub Releases](https://github.com/SeaXen/rexterm/releases)
 
 ## Development
 
@@ -364,4 +394,4 @@ If you need historical experiments, keep them under `_archive/` instead of mixin
 
 ## License
 
-No license file has been added yet. Add one before public redistribution if needed.
+This project is licensed under the [MIT License](LICENSE).
