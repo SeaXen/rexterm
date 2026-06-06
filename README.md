@@ -71,6 +71,7 @@ Rexterm/
 ├── scripts/
 │   ├── run-host.sh
 │   ├── install-host-systemd.sh
+│   ├── install-vps.sh
 │   ├── set-auth.sh
 │   └── reset-auth.sh
 ├── vendor-rootfs-tmux/
@@ -140,6 +141,34 @@ DietPi one-liner:
 sudo apt update && sudo apt install -y git python3 tmux && git clone https://github.com/SeaXen/rexterm.git && cd rexterm && cp .env.example .env && ./scripts/run-host.sh
 ```
 
+### Remote VPS / LAN install (copy-paste)
+
+Fastest path for a fresh Debian/Ubuntu/DietPi box:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/SeaXen/rexterm/main/scripts/install-vps.sh | sudo bash
+```
+
+What it does:
+- installs `git`, `python3`, `tmux`, `ca-certificates`, and `curl`
+- clones Rexterm into `/opt/rexterm`
+- creates `.env` from `.env.example` if missing
+- generates a real shared token if it still sees `change-me`
+- prompts for a login password when interactive, otherwise generates a temporary one
+- installs and starts the `rexterm-host` systemd service by default
+
+Useful overrides:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/SeaXen/rexterm/main/scripts/install-vps.sh | \
+  sudo REXTERM_PORT_OVERRIDE=2345 REXTERM_RUN_USER=$USER REXTERM_REPO_REF=v0.1.0 bash
+```
+
+Security note:
+- Rexterm listens on `0.0.0.0`
+- keep auth enabled
+- do **not** expose port `2344` directly to the public internet without a firewall or reverse proxy
+
 Open:
 
 ```text
@@ -186,6 +215,12 @@ Install as systemd service:
 ```bash
 cd /mnt/tb/1Apps/Rexterm
 sudo ./scripts/install-host-systemd.sh
+```
+
+Systemd one-liner:
+
+```bash
+git clone https://github.com/SeaXen/rexterm.git && cd rexterm && cp .env.example .env && sudo REXTERM_RUN_USER=$USER ./scripts/install-host-systemd.sh
 ```
 
 Useful service commands:

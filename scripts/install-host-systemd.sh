@@ -4,7 +4,7 @@ set -euo pipefail
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVICE_NAME="${REXTERM_SERVICE_NAME:-rexterm-host}"
 SERVICE_PATH="/etc/systemd/system/${SERVICE_NAME}.service"
-USER_NAME="${REXTERM_RUN_USER:-$(id -un)}"
+USER_NAME="${REXTERM_RUN_USER:-${SUDO_USER:-$(id -un)}}"
 
 if [[ "$(id -u)" -ne 0 ]]; then
   echo "This installer writes $SERVICE_PATH; run with sudo/root." >&2
